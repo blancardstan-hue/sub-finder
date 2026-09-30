@@ -7,6 +7,20 @@ import os
 st.set_page_config(page_title="Wyszukiwarka Zastępstw", page_icon="📋", layout="wide")
 st.title("Wyszukiwarka Zastępstw 📋")
 
+# --- ZARZĄDZANIE PAMIĘCIĄ SESJI (Obejście ograniczeń Streamlit) ---
+if "search_results" not in st.session_state:
+    st.session_state.search_results = None
+    st.session_state.teacher_counts = {}
+
+def update_end_time(group_idx):
+    """Callback: Aktualizuje czas zakończenia (+90 min) od razu po wpisaniu czasu startu"""
+    start_key = f"start_{group_idx}"
+    end_key = f"end_{group_idx}"
+    if start_key in st.session_state:
+        start_val = st.session_state[start_key]
+        start_dt = datetime.combine(datetime.today(), start_val)
+        st.session_state[end_key] = (start_dt + timedelta(minutes=90)).time()
+
 # --- OBSŁUGA PLIKU (DOMYŚLNY LUB WGRANY RĘCZNIE) ---
 default_file = "Zastępstwa 2026_27 - KUM&Co.xlsx"
 
@@ -55,6 +69,12 @@ loc_grammar = {
 # --- KONFIGURACJA GRUP ---
 groups_config = []
 st.write("### Parametry Grupy 1")
+
+# Inicjalizacja domyślnego czasu dla pierwszej grupy
+if "start_0" not in st.session_state:
+    st.session_state["start_0"] = time(15, 50)
+    st.session_state["end_0"] = time(17, 20)
+
 col1, col2, col3 = st.columns(3)
 with col1: default_day = st.selectbox("Dzień", days, key="day_0")
 with col2: default_level = st.selectbox("Poziom", levels, key="level_0")
@@ -62,14 +82,9 @@ with col3: default_branch = st.selectbox("Która filia?", list(branches.keys()),
 
 col_t1, col_t2 = st.columns(2)
 with col_t1: 
-    default_start = st.time_input("Czas rozpoczęcia", value=time(15, 50), key="start_0")
-
-# Automatyczne dodawanie 90 minut
-start_dt = datetime.combine(datetime.today(), default_start)
-auto_end = (start_dt + timedelta(minutes=90)).time()
-
+    default_start = st.time_input("Czas rozpoczęcia", key="start_0", on_change=update_end_time, args=(0,))
 with col_t2: 
-    default_end = st.time_input("Czas zakończenia", value=auto_end, key="end_0")
+    default_end = st.time_input("Czas zakończenia", key="end_0")
 
 groups_config.append({
     "day": default_day, "level": default_level, "branch": default_branch, 
@@ -78,6 +93,11 @@ groups_config.append({
 
 if is_multiple:
     for i in range(1, int(num_groups)):
+        # Inicjalizacja czasu dla kolejnych grup
+        if f"start_{i}" not in st.session_state:
+            st.session_state[f"start_{i}"] = st.session_state["start_0"]
+            st.session_state[f"end_{i}"] = st.session_state["end_0"]
+
         st.markdown("---")
         st.write(f"### Parametry Grupy {i+1}")
         c1, c2, c3 = st.columns(3)
@@ -87,13 +107,9 @@ if is_multiple:
         
         ct1, ct2 = st.columns(2)
         with ct1: 
-            g_start = st.time_input("Czas rozpoczęcia", value=default_start, key=f"start_{i}")
-            
-        g_start_dt = datetime.combine(datetime.today(), g_start)
-        g_auto_end = (g_start_dt + timedelta(minutes=90)).time()
-            
+            g_start = st.time_input("Czas rozpoczęcia", key=f"start_{i}", on_change=update_end_time, args=(i,))
         with ct2: 
-            g_end = st.time_input("Czas zakończenia", value=g_auto_end, key=f"end_{i}")
+            g_end = st.time_input("Czas zakończenia", key=f"end_{i}")
         
         groups_config.append({
             "day": g_day, "level": g_level, "branch": g_branch, 
@@ -145,15 +161,10 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
 
 st.markdown("---")
 
-# --- ZARZĄDZANIE PAMIĘCIĄ SESJI (Żeby filtry nie resetowały wyników) ---
-if "search_results" not in st.session_state:
-    st.session_state.search_results = None
-    st.session_state.teacher_counts = {}
-
 # --- GŁÓWNY PROCES ---
 if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
     if active_file is None:
-        st.error("⚠️ Proszę najpierw wgrać plik z grafikiem!")
+        st.error("⚠️️ Proszę najpierw wgrać plik z grafikiem!")
     else:
         try:
             wb = openpyxl.load_workbook(active_file, data_only=True)
