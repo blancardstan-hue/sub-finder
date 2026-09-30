@@ -158,7 +158,7 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
         if 0 <= diff_mins <= 60:
             od = loc_grammar[t_branch]
-            return f"Kończy o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
+            return f"Kończę o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
     return ""
 
 st.markdown("---")
@@ -166,7 +166,7 @@ st.markdown("---")
 # --- GŁÓWNY PROCES ---
 if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
     if active_file is None:
-        st.error("⚠️️ Proszę najpierw wgrać plik z grafikiem!")
+        st.error("⚠ Proszę najpierw wgrać plik z grafikiem!")
     else:
         try:
             wb = openpyxl.load_workbook(active_file, data_only=True)
@@ -279,7 +279,7 @@ if st.session_state.search_results is not None:
         else:
             show_only_all = False
     with col_f2:
-        exclude_bad_commute = st.toggle("Wyklucz lektorów ze złym dojazdem")
+        exclude_bad_commute = st.toggle("Wyklucz lektorów z małą ilością czasu na dojazd")
     with col_f3:
         show_phones = st.toggle("Pokaż numery telefonów")
 
@@ -307,10 +307,13 @@ if st.session_state.search_results is not None:
                 notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
                 
             if is_multiple:
+                # Polska odmiana: 2, 3, 4 -> zastępstwa | 5 -> zastępstw
+                odmiana = "zastępstwa" if count in [2, 3, 4] else "zastępstw"
+                
                 if count == int(num_groups):
-                    notes_html.append(f'<span title="Mogę wziąć WSZYSTKIE {count} zastępstwa!">🔥</span>')
+                    notes_html.append(f'<span title="Mogę wziąć WSZYSTKIE {count} {odmiana}!">🔥</span>')
                 elif count > 1:
-                    notes_html.append(f'<span title="Mogę wziąć {count} zastępstwa.">⭐</span>')
+                    notes_html.append(f'<span title="Mogę wziąć {count} {odmiana}.">⭐</span>')
                     
             notes_str = " ".join(notes_html) if notes_html else "-"
             
@@ -326,7 +329,6 @@ if st.session_state.search_results is not None:
         else:
             emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
             
-            # --- DODANY KOMUNIKAT PRZED SKOPIOWANIEM ---
             st.info("💡 **Pamiętaj, żeby wpisać się w tabelkę i załączyć w DW lidera, biuro i metodyków swojej filii :)**")
             st.code("; ".join(emails), language="text")
             
