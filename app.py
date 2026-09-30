@@ -158,7 +158,7 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
         if 0 <= diff_mins <= 60:
             od = loc_grammar[t_branch]
-            return f"Kończy o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
+            return f"Kończę o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
     return ""
 
 st.markdown("---")
@@ -280,7 +280,7 @@ if st.session_state.search_results is not None:
         else:
             show_only_all = False
     with col_f2:
-        exclude_bad_commute = st.toggle("Wyklucz lektorów ze złym dojazdem")
+        exclude_bad_commute = st.toggle("Wyklucz lektorów z małą ilością czasu na dojazd")
     with col_f3:
         show_phones = st.toggle("Pokaż numery telefonów")
 
@@ -302,7 +302,7 @@ if st.session_state.search_results is not None:
             notes_html = []
             
             if t["_is_at_branch"]:
-                notes_html.append('<span title="Uczę w tej samej filii :)">🏫</span>')
+                notes_html.append('<span title="Uczę w tej filii :)">🏫</span>')
             
             if t["_commute_warn"]:
                 notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
