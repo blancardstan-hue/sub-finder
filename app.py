@@ -7,13 +7,21 @@ import os
 st.set_page_config(page_title="Wyszukiwarka Zastępstw", page_icon="📋", layout="wide")
 st.title("Wyszukiwarka Zastępstw 📋")
 
-# --- SPRAWDZANIE PLIKU NA SERWERZE (Brak konieczności wgrywania!) ---
+# --- OBSŁUGA PLIKU (DOMYŚLNY LUB WGRANY RĘCZNIE) ---
 default_file = "Zastępstwa 2026_27 - KUM&Co.xlsx"
-if os.path.exists(default_file):
-    st.success(f"✅ Używam pliku z serwera: **{default_file}**. Nie musisz niczego wgrywać!")
-    uploaded_file = default_file
+
+st.info("💡 **Wskazówka:** Aplikacja domyślnie korzysta z zapisanego na serwerze grafiku. Jeśli wiesz, że grafik uległ niedawno zmianie, warto wgrać jego zaktualizowaną wersję poniżej.")
+uploaded_file = st.file_uploader("Wgraj zaktualizowany grafik (opcjonalnie)", type=["xlsx"])
+
+if uploaded_file is not None:
+    active_file = uploaded_file
+    st.success("✅ Używam wgranego przez Ciebie nowszego pliku!")
+elif os.path.exists(default_file):
+    active_file = default_file
+    st.success(f"✅ Używam domyślnego pliku z serwera: **{default_file}**.")
 else:
-    uploaded_file = st.file_uploader("Wgraj grafik (plik Excel)", type=["xlsx"])
+    active_file = None
+    st.warning("⚠️ Nie znaleziono domyślnego pliku na serwerze. Proszę wgrać grafik ręcznie.")
 
 # --- USTAWIENIA NA GŁÓWNYM EKRANIE ---
 st.markdown("---")
@@ -22,7 +30,7 @@ col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
     exclude_me = st.text_input("Wyklucz mnie (Twoje Imię i Nazwisko)", placeholder="np. Jan Kowalski").strip().lower()
 with col_opt2:
-    st.write("") # Drobne wyrównanie
+    st.write("") 
     is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
     if is_multiple:
         num_groups = st.number_input("Ile grup?", min_value=2, max_value=5, value=2)
@@ -35,7 +43,7 @@ days = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek"]
 levels = ["3-5 LAT", "0", "1", "2", "3", "4", "5", "6", "7", "8+", "MASTER"]
 day_mapping = {"Poniedziałek": "PON", "Wtorek": "WT", "Środa": "ŚR", "Czwartek": "CZW", "Piątek": "PT"}
 branches = {
-    "Dowolna (szukaj wszystkich)": None,
+    "-": None,
     "Ursus 1 (U1)": "U1", "Ursus 2 (U2)": "U2", "Komorów (K)": "K",
     "Michałowice (M)": "M", "Nowa Wieś (NW)": "NW", "Pruszków (P)": "P"
 }
@@ -50,11 +58,18 @@ st.write("### Parametry Grupy 1")
 col1, col2, col3 = st.columns(3)
 with col1: default_day = st.selectbox("Dzień", days, key="day_0")
 with col2: default_level = st.selectbox("Poziom", levels, key="level_0")
-with col3: default_branch = st.selectbox("Filia docelowa", list(branches.keys()), key="branch_0")
+with col3: default_branch = st.selectbox("Która filia?", list(branches.keys()), key="branch_0")
 
 col_t1, col_t2 = st.columns(2)
-with col_t1: default_start = st.time_input("Czas rozpoczęcia", value=time(15, 50), key="start_0")
-with col_t2: default_end = st.time_input("Czas zakończenia", value=time(17, 20), key="end_0")
+with col_t1: 
+    default_start = st.time_input("Czas rozpoczęcia", value=time(15, 50), key="start_0")
+
+# Automatyczne dodawanie 90 minut
+start_dt = datetime.combine(datetime.today(), default_start)
+auto_end = (start_dt + timedelta(minutes=90)).time()
+
+with col_t2: 
+    default_end = st.time_input("Czas zakończenia", value=auto_end, key="end_0")
 
 groups_config.append({
     "day": default_day, "level": default_level, "branch": default_branch, 
@@ -68,11 +83,17 @@ if is_multiple:
         c1, c2, c3 = st.columns(3)
         with c1: g_day = st.selectbox("Dzień", days, index=days.index(default_day), key=f"day_{i}")
         with c2: g_level = st.selectbox("Poziom", levels, key=f"level_{i}")
-        with c3: g_branch = st.selectbox("Filia docelowa", list(branches.keys()), index=list(branches.keys()).index(default_branch), key=f"branch_{i}")
+        with c3: g_branch = st.selectbox("Która filia?", list(branches.keys()), index=list(branches.keys()).index(default_branch), key=f"branch_{i}")
         
         ct1, ct2 = st.columns(2)
-        with ct1: g_start = st.time_input("Czas rozpoczęcia", value=default_start, key=f"start_{i}")
-        with ct2: g_end = st.time_input("Czas zakończenia", value=default_end, key=f"end_{i}")
+        with ct1: 
+            g_start = st.time_input("Czas rozpoczęcia", value=default_start, key=f"start_{i}")
+            
+        g_start_dt = datetime.combine(datetime.today(), g_start)
+        g_auto_end = (g_start_dt + timedelta(minutes=90)).time()
+            
+        with ct2: 
+            g_end = st.time_input("Czas zakończenia", value=g_auto_end, key=f"end_{i}")
         
         groups_config.append({
             "day": g_day, "level": g_level, "branch": g_branch, 
@@ -119,21 +140,27 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
         if 0 <= diff_mins <= 60:
             od = loc_grammar[t_branch]
             do = loc_grammar[target_branch_code]
-            return f"⚠️ Kończę zajęcia o {last_busy_end.strftime('%H:%M')}. Mam tylko {diff_mins} min, żeby przejechać z {od} do {do}, mogę mieć problem, żeby zdążyć."
+            return f"Kończę zajęcia o {last_busy_end.strftime('%H:%M')}. Mam tylko {diff_mins} min na dojazd z {od} do {do}."
     return ""
 
 st.markdown("---")
+
+# --- ZARZĄDZANIE PAMIĘCIĄ SESJI (Żeby filtry nie resetowały wyników) ---
+if "search_results" not in st.session_state:
+    st.session_state.search_results = None
+    st.session_state.teacher_counts = {}
+
 # --- GŁÓWNY PROCES ---
 if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
-    if uploaded_file is None:
+    if active_file is None:
         st.error("⚠️ Proszę najpierw wgrać plik z grafikiem!")
     else:
         try:
-            wb = openpyxl.load_workbook(uploaded_file, data_only=True)
-            if not isinstance(uploaded_file, str): 
-                uploaded_file.seek(0)
+            wb = openpyxl.load_workbook(active_file, data_only=True)
+            if not isinstance(active_file, str): 
+                active_file.seek(0)
                 
-            df_levels = pd.read_excel(uploaded_file, sheet_name="Lektorzy i poziomy grup na zast", header=None)
+            df_levels = pd.read_excel(active_file, sheet_name="Lektorzy i poziomy grup na zast", header=None)
             
             all_group_results = []
             
@@ -211,44 +238,81 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                 
                 all_group_results.append(a_teachers)
                 
-            teacher_counts = {}
+            # Zliczanie ilości grup dla lektora
+            counts = {}
             for res in all_group_results:
                 for t in res:
-                    teacher_counts[t["Nauczyciel"]] = teacher_counts.get(t["Nauczyciel"], 0) + 1
+                    counts[t["Nauczyciel"]] = counts.get(t["Nauczyciel"], 0) + 1
                     
-            for g_idx, (g_conf, res) in enumerate(zip(groups_config, all_group_results)):
-                st.markdown(f"## Wyniki dla Grupy {g_idx+1}")
-                st.write(f"**{g_conf['day']} | {g_conf['start'].strftime('%H:%M')} - {g_conf['end'].strftime('%H:%M')} | Poziom: {g_conf['level']} | Filia: {g_conf['branch']}**")
-                
-                if not res:
-                    st.warning("Brak nauczycieli spełniających kryteria dla tej grupy.")
-                    continue
-                    
-                display_data = []
-                for t in res:
-                    notes = []
-                    if t["_is_at_branch"]:
-                        notes.append("Uczę w tej filii :)")
-                    if t["_commute_warn"]:
-                        notes.append(t["_commute_warn"])
-                        
-                    count = teacher_counts[t["Nauczyciel"]]
-                    if is_multiple:
-                        if count == int(num_groups):
-                            notes.append(f"🔥 Mogę wziąć WSZYSTKIE {int(num_groups)} zastępstwa!")
-                        elif count > 1:
-                            notes.append(f"Mogę wziąć {count} zastępstwa.")
-                            
-                    display_data.append({
-                        "Nauczyciel": t["Nauczyciel"],
-                        "E-mail": t["E-mail"],
-                        "Notatki": " | ".join(notes)
-                    })
-                    
-                emails = [t["E-mail"] for t in display_data if t["E-mail"] != "nan" and "@" in t["E-mail"]]
-                email_string = "; ".join(emails)
-                st.code(email_string, language="text")
-                st.dataframe(pd.DataFrame(display_data), hide_index=True)
-                
+            # Zapis do pamięci sesji
+            st.session_state.search_results = all_group_results
+            st.session_state.teacher_counts = counts
+            
         except Exception as e:
             st.error(f"Wystąpił błąd: {e}")
+
+# --- WYSWIETLANIE I FILTROWANIE WYNIKÓW ---
+if st.session_state.search_results is not None:
+    st.write("### ⚙️ Filtry wyników")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        if is_multiple:
+            show_only_all = st.toggle("Pokaż tylko lektorów, którzy mogą wziąć WSZYSTKIE zastępstwa")
+        else:
+            show_only_all = False
+    with col_f2:
+        exclude_bad_commute = st.toggle("Wyklucz lektorów, którzy mają mało czasu na dojazd")
+
+    custom_css = """
+    <style>
+    .styled-table { border-collapse: collapse; margin: 15px 0; width: 100%; font-family: inherit; font-size: 0.9em; }
+    .styled-table thead tr { background-color: rgba(128, 128, 128, 0.15); text-align: left; }
+    .styled-table th, .styled-table td { padding: 10px 15px; border-bottom: 1px solid rgba(128,128,128,0.2); }
+    </style>
+    """
+
+    for g_idx, (g_conf, res) in enumerate(zip(groups_config, st.session_state.search_results)):
+        st.markdown(f"## Wyniki dla Grupy {g_idx+1}")
+        st.write(f"**{g_conf['day']} | {g_conf['start'].strftime('%H:%M')} - {g_conf['end'].strftime('%H:%M')} | Poziom: {g_conf['level']} | Filia: {g_conf['branch']}**")
+        
+        display_data = []
+        for t in res:
+            count = st.session_state.teacher_counts[t["Nauczyciel"]]
+            
+            if show_only_all and count < int(num_groups):
+                continue
+            if exclude_bad_commute and t["_commute_warn"] != "":
+                continue
+                
+            notes_html = []
+            
+            if t["_is_at_branch"]:
+                notes_html.append('<span title="Uczę w tej samej filii :)" style="cursor:help; font-size:1.4em; margin-right:5px;">🏫</span>')
+            
+            if t["_commute_warn"]:
+                notes_html.append(f'<span title="{t["_commute_warn"]}" style="cursor:help; font-size:1.4em; margin-right:5px;">⚠️</span>')
+                
+            if is_multiple:
+                if count == int(num_groups):
+                    notes_html.append(f'<span title="Mogę wziąć WSZYSTKIE {count} zastępstwa!" style="cursor:help; font-size:1.4em; margin-right:5px;">🔥</span>')
+                elif count > 1:
+                    notes_html.append(f'<span title="Mogę wziąć {count} zastępstwa." style="cursor:help; font-size:1.4em; margin-right:5px;">⭐</span>')
+                    
+            notes_str = "".join(notes_html) if notes_html else "-"
+            
+            display_data.append({
+                "Nauczyciel": t["Nauczyciel"],
+                "E-mail": t["E-mail"],
+                "Notatki": notes_str
+            })
+            
+        if not display_data:
+            st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
+        else:
+            emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
+            st.code("; ".join(emails), language="text")
+            
+            df_display = pd.DataFrame(display_data)
+            html_table = df_display.to_html(escape=False, index=False)
+            html_table = html_table.replace('<table border="1" class="dataframe">', '<table class="styled-table">')
+            st.markdown(custom_css + html_table, unsafe_allow_html=True)
