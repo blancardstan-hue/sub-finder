@@ -301,13 +301,12 @@ if st.session_state.search_results is not None:
             notes_html = []
             
             if t["_is_at_branch"]:
-                notes_html.append('<span title="Uczę w tej samej filii :)">🏫</span>')
+                notes_html.append('<span title="Uczę w tej filii :)">🏫</span>')
             
             if t["_commute_warn"]:
                 notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
                 
             if is_multiple:
-                # Polska odmiana: 2, 3, 4 -> zastępstwa | 5 -> zastępstw
                 odmiana = "zastępstwa" if count in [2, 3, 4] else "zastępstw"
                 
                 if count == int(num_groups):
