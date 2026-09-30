@@ -166,7 +166,7 @@ st.markdown("---")
 # --- GŁÓWNY PROCES ---
 if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
     if active_file is None:
-        st.error("⚠️ Proszę najpierw wgrać plik z grafikiem!")
+        st.error("⚠️️ Proszę najpierw wgrać plik z grafikiem!")
     else:
         try:
             wb = openpyxl.load_workbook(active_file, data_only=True)
@@ -180,7 +180,6 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
             for g_idx, g_conf in enumerate(groups_config):
                 level_col = None
                 
-                # POPRAWKA: Szukamy nazwy poziomu DOKŁADNIE w 5. wierszu (indeks 4)
                 for col_idx in df_levels.columns:
                     if str(df_levels.iloc[4][col_idx]).strip() == str(g_conf["level"]).strip():
                         level_col = col_idx
@@ -198,10 +197,16 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                 continue 
                                 
                             b_val = str(row[2]).strip()
+                            
+                            # Pobieranie telefonu (kolumna D - indeks 3)
+                            phone_val = str(row[3]).strip()
+                            if phone_val == "nan": 
+                                phone_val = "-"
+                                
                             email = str(row[4]).strip()
                             
                             if t_name != "nan":
-                                q_teachers.append({"name": t_name, "email": email, "branch": b_val})
+                                q_teachers.append({"name": t_name, "email": email, "phone": phone_val, "branch": b_val})
                                 
                 excel_day = day_mapping[g_conf["day"]]
                 day_sheet = wb[excel_day]
@@ -246,6 +251,7 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                 a_teachers.append({
                                     "Nauczyciel": t["name"],
                                     "E-mail": t["email"],
+                                    "Telefon": t["phone"],
                                     "Filie": t["branch"],
                                     "_is_at_branch": is_at_branch,
                                     "_commute_warn": commute_warn
@@ -267,14 +273,16 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
 # --- WYSWIETLANIE I FILTROWANIE WYNIKÓW ---
 if st.session_state.search_results is not None:
     st.write("### ⚙️ Filtry wyników")
-    col_f1, col_f2 = st.columns(2)
+    col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
         if is_multiple:
-            show_only_all = st.toggle("Pokaż tylko lektorów, którzy mogą wziąć WSZYSTKIE zastępstwa")
+            show_only_all = st.toggle("Tylko lektorzy na WSZYSTKIE grupy")
         else:
             show_only_all = False
     with col_f2:
-        exclude_bad_commute = st.toggle("Wyklucz lektorów, którzy mają mało czasu na dojazd")
+        exclude_bad_commute = st.toggle("Wyklucz lektorów ze złym dojazdem")
+    with col_f3:
+        show_phones = st.toggle("Pokaż numery telefonów")
 
     st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
 
@@ -310,17 +318,24 @@ if st.session_state.search_results is not None:
             display_data.append({
                 "Nauczyciel": t["Nauczyciel"],
                 "E-mail": t["E-mail"],
+                "Telefon": t["Telefon"],
                 "Notatki": notes_str
             })
             
         if not display_data:
             st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
         else:
+            # Lista adresów pozostaje bez telefonów (do łatwego kopiowania w Outlook/Gmail)
             emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
             st.code("; ".join(emails), language="text")
             
-            md_table = "| Nauczyciel | E-mail | Notatki |\n|---|---|---|\n"
-            for d in display_data:
-                md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Notatki']} |\n"
+            if show_phones:
+                md_table = "| Nauczyciel | E-mail | Telefon | Notatki |\n|---|---|---|---|\n"
+                for d in display_data:
+                    md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Telefon']} | {d['Notatki']} |\n"
+            else:
+                md_table = "| Nauczyciel | E-mail | Notatki |\n|---|---|---|\n"
+                for d in display_data:
+                    md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Notatki']} |\n"
                 
             st.markdown(md_table, unsafe_allow_html=True)
