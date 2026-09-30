@@ -50,7 +50,7 @@ st.markdown("---")
 st.write("### Opcje wyszukiwania")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
-    exclude_me = st.text_input("Wyklucz mnie (Twoje Imię i Nazwisko)", placeholder="np. Jan Kowalski").strip().lower()
+    exclude_me = st.text_input("Nie pokazuj mojego emaila", placeholder="Wpisz swoje imię i nazwisko, np. Jan Kowalski").strip().lower()
 with col_opt2:
     st.write("") 
     is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
