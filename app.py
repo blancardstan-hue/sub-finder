@@ -50,7 +50,7 @@ st.markdown("---")
 st.write("### Opcje wyszukiwania")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
-    exclude_me = st.text_input("Nie pokazuj mojego maila (Twoje Imię i Nazwisko)", placeholder="np. Jan Kowalski").strip().lower()
+    exclude_me = st.text_input("Wyklucz mnie (Twoje Imię i Nazwisko)", placeholder="np. Jan Kowalski").strip().lower()
 with col_opt2:
     st.write("") 
     is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
@@ -158,7 +158,7 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
         if 0 <= diff_mins <= 60:
             od = loc_grammar[t_branch]
-            return f"Kończę o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
+            return f"Kończy o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
     return ""
 
 st.markdown("---")
@@ -198,7 +198,6 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                 
                             b_val = str(row[2]).strip()
                             
-                            # Pobieranie telefonu (kolumna D - indeks 3)
                             phone_val = str(row[3]).strip()
                             if phone_val == "nan": 
                                 phone_val = "-"
@@ -280,7 +279,7 @@ if st.session_state.search_results is not None:
         else:
             show_only_all = False
     with col_f2:
-        exclude_bad_commute = st.toggle("Wyklucz lektorów z małą ilością czasu na dojazd")
+        exclude_bad_commute = st.toggle("Wyklucz lektorów ze złym dojazdem")
     with col_f3:
         show_phones = st.toggle("Pokaż numery telefonów")
 
@@ -302,7 +301,7 @@ if st.session_state.search_results is not None:
             notes_html = []
             
             if t["_is_at_branch"]:
-                notes_html.append('<span title="Uczę w tej filii :)">🏫</span>')
+                notes_html.append('<span title="Uczę w tej samej filii :)">🏫</span>')
             
             if t["_commute_warn"]:
                 notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
@@ -325,8 +324,10 @@ if st.session_state.search_results is not None:
         if not display_data:
             st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
         else:
-            # Lista adresów pozostaje bez telefonów (do łatwego kopiowania w Outlook/Gmail)
             emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
+            
+            # --- DODANY KOMUNIKAT PRZED SKOPIOWANIEM ---
+            st.info("💡 **Pamiętaj, żeby wpisać się w tabelkę i załączyć w DW lidera, biuro i metodyków swojej filii :)**")
             st.code("; ".join(emails), language="text")
             
             if show_phones:
