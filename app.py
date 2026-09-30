@@ -14,27 +14,31 @@ if os.path.exists(default_file):
     uploaded_file = default_file
 else:
     uploaded_file = st.file_uploader("Wgraj grafik (plik Excel)", type=["xlsx"])
-    st.info("💡 Wskazówka: Wrzuć plik Excela bezpośrednio do GitHuba, żeby apka ładowała go sama na zawsze.")
 
-# --- FILTRY BOCZNE ---
-st.sidebar.header("Ustawienia")
-exclude_me = st.sidebar.text_input("Wyklucz mnie z wyników (Twoje Imię i Nazwisko)", placeholder="np. Jan Kowalski").strip().lower()
+# --- USTAWIENIA NA GŁÓWNYM EKRANIE ---
+st.markdown("---")
+st.write("### Opcje wyszukiwania")
+col_opt1, col_opt2 = st.columns(2)
+with col_opt1:
+    exclude_me = st.text_input("Wyklucz mnie (Twoje Imię i Nazwisko)", placeholder="np. Jan Kowalski").strip().lower()
+with col_opt2:
+    st.write("") # Drobne wyrównanie
+    is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
+    if is_multiple:
+        num_groups = st.number_input("Ile grup?", min_value=2, max_value=5, value=2)
+    else:
+        num_groups = 1
 
-st.sidebar.markdown("---")
-is_multiple = st.sidebar.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
-num_groups = st.sidebar.number_input("Ile grup?", min_value=2, max_value=5, value=2) if is_multiple else 1
+st.markdown("---")
 
 days = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek"]
 levels = ["3-5 LAT", "0", "1", "2", "3", "4", "5", "6", "7", "8+", "MASTER"]
-
 day_mapping = {"Poniedziałek": "PON", "Wtorek": "WT", "Środa": "ŚR", "Czwartek": "CZW", "Piątek": "PT"}
-
 branches = {
     "Dowolna (szukaj wszystkich)": None,
     "Ursus 1 (U1)": "U1", "Ursus 2 (U2)": "U2", "Komorów (K)": "K",
     "Michałowice (M)": "M", "Nowa Wieś (NW)": "NW", "Pruszków (P)": "P"
 }
-
 loc_grammar = {
     "U1": "Ursusa 1", "U2": "Ursusa 2", "K": "Komorowa", 
     "M": "Michałowic", "NW": "Nowej Wsi", "P": "Pruszkowa"
@@ -118,13 +122,11 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
             return f"⚠️ Kończę zajęcia o {last_busy_end.strftime('%H:%M')}. Mam tylko {diff_mins} min, żeby przejechać z {od} do {do}, mogę mieć problem, żeby zdążyć."
     return ""
 
-
 st.markdown("---")
 # --- GŁÓWNY PROCES ---
-# Przycisk jest teraz widoczny zawsze!
 if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
     if uploaded_file is None:
-        st.error("⚠️ Proszę najpierw wgrać plik z grafikiem (na samej górze strony)!")
+        st.error("⚠️ Proszę najpierw wgrać plik z grafikiem!")
     else:
         try:
             wb = openpyxl.load_workbook(uploaded_file, data_only=True)
