@@ -134,8 +134,6 @@ def is_cell_free(cell):
     return False
 
 def overlaps(cell_time, req_start, req_end):
-    # Kolumna w pliku narusza zajęcia TYLKO, jeśli jest stricte pomiędzy czasem trwania lekcji.
-    # Umożliwia to zjawisko, gdzie lektor może wziąć zastępstwo od 15:45, jeśli jego poprzednia lekcja kończy się w Excelu w slocie "15:45"
     return req_start < cell_time < req_end
 
 def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, teacher_branch_str):
@@ -151,11 +149,10 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
     for cell in day_sheet[4]:
         if isinstance(cell.value, time):
             col_dt = datetime.combine(dummy, cell.value)
-            # Sprawdź tylko zajęcia kończące się równo z lub przed rozpoczęciem nowej lekcji
             if col_dt <= req_dt:
                 t_cell = day_sheet.cell(row=teacher_row, column=cell.column)
                 if not is_cell_free(t_cell):
-                    last_busy_end = col_dt # <- POPRAWKA: zlikwidowane nienaturalne +15 min
+                    last_busy_end = col_dt 
                     
     if last_busy_end and last_busy_end <= req_dt:
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
@@ -182,8 +179,10 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
             
             for g_idx, g_conf in enumerate(groups_config):
                 level_col = None
+                
+                # POPRAWKA: Szukamy nazwy poziomu DOKŁADNIE w 5. wierszu (indeks 4)
                 for col_idx in df_levels.columns:
-                    if df_levels[col_idx].head(10).astype(str).str.contains(g_conf["level"], na=False, regex=False).any():
+                    if str(df_levels.iloc[4][col_idx]).strip() == str(g_conf["level"]).strip():
                         level_col = col_idx
                         break
                         
@@ -320,7 +319,6 @@ if st.session_state.search_results is not None:
             emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
             st.code("; ".join(emails), language="text")
             
-            # Budowanie pięknej i natywnej tabeli Markdown zawierającej tagi HTML
             md_table = "| Nauczyciel | E-mail | Notatki |\n|---|---|---|\n"
             for d in display_data:
                 md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Notatki']} |\n"
