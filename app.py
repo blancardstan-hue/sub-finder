@@ -12,6 +12,15 @@ uploaded_file = st.file_uploader("Wgraj grafik (plik Excel)", type=["xlsx"])
 days = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek"]
 levels = ["3-5 LAT", "0", "1", "2", "3", "4", "5", "6", "7", "8+", "MASTER"]
 
+# Mapowanie dni na nowe skrócone nazwy arkuszy w pliku 2026/27
+day_mapping = {
+    "Poniedziałek": "PON",
+    "Wtorek": "WT",
+    "Środa": "ŚR",
+    "Czwartek": "CZW",
+    "Piątek": "PT"
+}
+
 # Mapowanie opcji wyboru na skróty z pliku Excel
 branches = {
     "Dowolna (szukaj wszystkich)": None,
@@ -61,7 +70,6 @@ def overlaps(block_start_time, req_start, req_end):
 
 if uploaded_file and st.button("Znajdź Zastępstwo"):
     try:
-        # Wczytanie pliku
         wb = openpyxl.load_workbook(uploaded_file, data_only=True)
         
         # --- 1. Sprawdzenie kwalifikacji i filii (Arkusz Lektorzy i poziomy...) ---
@@ -71,7 +79,6 @@ if uploaded_file and st.button("Znajdź Zastępstwo"):
         
         qualified_teachers = []
         
-        # Znalezienie kolumny z odpowiednim poziomem
         level_col = None
         for col_idx in df_levels.columns:
             if df_levels[col_idx].head(10).astype(str).str.contains(selected_level, na=False, regex=False).any():
@@ -80,26 +87,24 @@ if uploaded_file and st.button("Znajdź Zastępstwo"):
                 
         if level_col is not None:
             for idx, row in df_levels.iterrows():
-                if idx < 4: continue # Pomijanie nagłówków
+                if idx < 4: continue 
                 val = str(row[level_col]).strip().lower()
                 if val == "v":
-                    teacher_name = str(row[1]).strip() # Kolumna B (Imię i nazwisko)
-                    branch_val = str(row[2]).strip()   # Kolumna C (Filia)
-                    email = str(row[4]).strip()        # Kolumna E (E-mail)
+                    teacher_name = str(row[1]).strip() 
+                    branch_val = str(row[2]).strip()   
+                    email = str(row[4]).strip()        
                     
                     if teacher_name != "nan":
                         is_at_branch = False
                         selected_branch_code = branches[selected_branch]
                         
-                        # Sprawdzanie filii (jeśli wybrano konkretną)
                         if selected_branch_code is not None:
                             branch_upper = branch_val.upper()
-                            # KUM&Co uczy wszędzie
                             if "KUM" in branch_upper and "CO" in branch_upper:
                                 is_at_branch = True
                             else:
-                                # Rozdzielenie w przypadku np. "NW+P"
-                                teacher_branches = [b.strip() for b in branch_upper.replace(" ", "").split("+")]
+                                # Obsługa zarówno "NW+P", jak i "NW&P"
+                                teacher_branches = [b.strip() for b in branch_upper.replace(" ", "").replace("&", "+").split("+")]
                                 if selected_branch_code in teacher_branches:
                                     is_at_branch = True
                         
@@ -113,11 +118,11 @@ if uploaded_file and st.button("Znajdź Zastępstwo"):
                         })
         
         # --- 2. Sprawdzenie dostępności w grafiku (Arkusze dni) ---
-        day_sheet = wb[selected_day]
+        excel_day_name = day_mapping[selected_day]
+        day_sheet = wb[excel_day_name]
         
-        # Sprawdzenie, które 15-minutowe bloki pokrywają się z wybranym czasem
         overlapping_cols = {}
-        for cell in day_sheet[4]: # Wiersz 4 zawiera godziny
+        for cell in day_sheet[4]: 
             if isinstance(cell.value, time):
                 if overlaps(cell.value, start_time, end_time):
                     overlapping_cols[cell.column] = cell.value
@@ -129,7 +134,6 @@ if uploaded_file and st.button("Znajdź Zastępstwo"):
         else:
             for teacher in qualified_teachers:
                 teacher_row = None
-                # Znalezienie nauczyciela w Kolumnie A
                 for row in range(4, day_sheet.max_row + 1):
                     cell_val = str(day_sheet.cell(row=row, column=1).value).strip()
                     if cell_val != "None" and (teacher["Nauczyciel"] in cell_val or cell_val in teacher["Nauczyciel"]):
@@ -137,7 +141,6 @@ if uploaded_file and st.button("Znajdź Zastępstwo"):
                         break
                         
                 if teacher_row:
-                    # Sprawdzenie wszystkich wymaganych bloków 15-minutowych
                     is_free = True
                     for col in overlapping_cols.keys():
                         cell = day_sheet.cell(row=teacher_row, column=col)
