@@ -25,7 +25,7 @@ def update_branches():
     """Kopiuje wybraną filię z Grupy 1 do wszystkich pozostałych grup"""
     if "branch_0" in st.session_state:
         new_branch = st.session_state["branch_0"]
-        for i in range(1, 6): # Zakres do 5 grup
+        for i in range(1, 6):
             if f"branch_{i}" in st.session_state:
                 st.session_state[f"branch_{i}"] = new_branch
 
@@ -133,13 +133,10 @@ def is_cell_free(cell):
     if rgb in ["00000000", "FFFFFFFF", None]: return True
     return False
 
-def overlaps(block_start_time, req_start, req_end):
-    dummy_date = datetime(2000, 1, 1)
-    block_start = datetime.combine(dummy_date, block_start_time)
-    block_end = block_start + timedelta(minutes=15)
-    r_start = datetime.combine(dummy_date, req_start)
-    r_end = datetime.combine(dummy_date, req_end)
-    return block_start < r_end and block_end > r_start
+def overlaps(cell_time, req_start, req_end):
+    # Kolumna w pliku narusza zajęcia TYLKO, jeśli jest stricte pomiędzy czasem trwania lekcji.
+    # Umożliwia to zjawisko, gdzie lektor może wziąć zastępstwo od 15:45, jeśli jego poprzednia lekcja kończy się w Excelu w slocie "15:45"
+    return req_start < cell_time < req_end
 
 def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, teacher_branch_str):
     if not target_branch_code: return ""
@@ -154,10 +151,11 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
     for cell in day_sheet[4]:
         if isinstance(cell.value, time):
             col_dt = datetime.combine(dummy, cell.value)
-            if col_dt < req_dt:
+            # Sprawdź tylko zajęcia kończące się równo z lub przed rozpoczęciem nowej lekcji
+            if col_dt <= req_dt:
                 t_cell = day_sheet.cell(row=teacher_row, column=cell.column)
                 if not is_cell_free(t_cell):
-                    last_busy_end = col_dt + timedelta(minutes=15)
+                    last_busy_end = col_dt # <- POPRAWKA: zlikwidowane nienaturalne +15 min
                     
     if last_busy_end and last_busy_end <= req_dt:
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
@@ -279,7 +277,7 @@ if st.session_state.search_results is not None:
     with col_f2:
         exclude_bad_commute = st.toggle("Wyklucz lektorów, którzy mają mało czasu na dojazd")
 
-    st.info("💡 **Legenda:** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
+    st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
 
     for g_idx, (g_conf, res) in enumerate(zip(groups_config, st.session_state.search_results)):
         st.markdown(f"## Wyniki dla Grupy {g_idx+1}")
@@ -294,21 +292,21 @@ if st.session_state.search_results is not None:
             if exclude_bad_commute and t["_commute_warn"] != "":
                 continue
                 
-            notes = []
+            notes_html = []
             
             if t["_is_at_branch"]:
-                notes.append("🏫")
-                
+                notes_html.append('<span title="Uczę w tej samej filii :)">🏫</span>')
+            
             if t["_commute_warn"]:
-                notes.append(f"⚠️ {t['_commute_warn']}")
+                notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
                 
             if is_multiple:
                 if count == int(num_groups):
-                    notes.append("🔥")
+                    notes_html.append(f'<span title="Mogę wziąć WSZYSTKIE {count} zastępstwa!">🔥</span>')
                 elif count > 1:
-                    notes.append("⭐")
+                    notes_html.append(f'<span title="Mogę wziąć {count} zastępstwa.">⭐</span>')
                     
-            notes_str = " | ".join(notes) if notes else "-"
+            notes_str = " ".join(notes_html) if notes_html else "-"
             
             display_data.append({
                 "Nauczyciel": t["Nauczyciel"],
@@ -322,4 +320,9 @@ if st.session_state.search_results is not None:
             emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
             st.code("; ".join(emails), language="text")
             
-            st.dataframe(pd.DataFrame(display_data), hide_index=True)
+            # Budowanie pięknej i natywnej tabeli Markdown zawierającej tagi HTML
+            md_table = "| Nauczyciel | E-mail | Notatki |\n|---|---|---|\n"
+            for d in display_data:
+                md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Notatki']} |\n"
+                
+            st.markdown(md_table, unsafe_allow_html=True)
