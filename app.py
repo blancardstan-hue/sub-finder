@@ -397,8 +397,9 @@ if st.session_state.search_results is not None:
                 bcc_emails = ";".join(emails)
                 mailto_link = f"mailto:?bcc={bcc_emails}&subject={subject}&body={body_encoded}"
                 
+                # --- POPRAWKA: Dodany target="_top" wewnątrz tagu <a> ---
                 st.markdown(
-                    f'<a href="{mailto_link}" style="display: inline-block; width: 100%; text-align: center; padding: 0.5em 1em; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 4px; font-weight: bold;">'
+                    f'<a href="{mailto_link}" target="_top" style="display: inline-block; width: 100%; text-align: center; padding: 0.5em 1em; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 4px; font-weight: bold;">'
                     f'✉️ Wyślij e-mail jednym kliknięciem (otwiera Twoją pocztę)</a>', 
                     unsafe_allow_html=True
                 )
