@@ -29,6 +29,7 @@ def update_branches():
                 st.session_state[f"branch_{i}"] = new_branch
 
 def next_tpl(idx):
+    # Callback zmieniający indeks wybranego szablonu
     st.session_state[f"tpl_{idx}"] = (st.session_state.get(f"tpl_{idx}", 0) + 1) % 6
 
 # --- FUNKCJE I SŁOWNIKI BAZOWE ---
@@ -43,6 +44,16 @@ def is_cell_free(cell):
 days = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek"]
 levels = ["3-5 LAT", "0", "1", "2", "3", "4", "5", "6", "7", "8+", "MASTER"]
 day_mapping = {"Poniedziałek": "PON", "Wtorek": "WT", "Środa": "ŚR", "Czwartek": "CZW", "Piątek": "PT"}
+
+# Słownik z polską odmianą dni tygodnia
+grammar_days = {
+    "Poniedziałek": {"na": "poniedziałek", "w": "w poniedziałek", "najblizszy": "w najbliższy poniedziałek", "mianownik": "poniedziałek"},
+    "Wtorek": {"na": "wtorek", "w": "we wtorek", "najblizszy": "w najbliższy wtorek", "mianownik": "wtorek"},
+    "Środa": {"na": "środę", "w": "w środę", "najblizszy": "w najbliższą środę", "mianownik": "środa"},
+    "Czwartek": {"na": "czwartek", "w": "w czwartek", "najblizszy": "w najbliższy czwartek", "mianownik": "czwartek"},
+    "Piątek": {"na": "piątek", "w": "w piątek", "najblizszy": "w najbliższy piątek", "mianownik": "piątek"}
+}
+
 branches = {
     "-": None,
     "Ursus 1 (U1)": "U1", "Ursus 2 (U2)": "U2", "Komorów (K)": "K",
@@ -69,21 +80,36 @@ else:
     active_file = None
     st.warning("⚠️ Nie znaleziono domyślnego pliku na serwerze. Proszę wgrać grafik ręcznie.")
 
-# --- SPRAWDZANIE WŁASNEGO PLANU ---
+# --- USTAWIENIA NA GŁÓWNYM EKRANIE (ZINTEGROWANE) ---
 st.markdown("---")
-with st.expander("📅 Sprawdź swój własny plan (opcjonalnie)"):
-    st.write("Szybki podgląd Twoich dzisiejszych zajęć, żeby łatwiej było zaplanować ewentualną zamianę z innym lektorem.")
+st.write("### Główne opcje")
+col_opt1, col_opt2 = st.columns(2)
+with col_opt1:
+    my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników i pozwala sprawdzić plan)", placeholder="np. Jan Kowalski").strip()
+    exclude_me = my_name.lower()
+with col_opt2:
+    st.write("") 
+    is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
+    if is_multiple:
+        num_groups = st.number_input("Ile grup?", min_value=2, max_value=5, value=2)
+    else:
+        num_groups = 1
+
+# --- SPRAWDZANIE WŁASNEGO PLANU ---
+with st.expander("📅 Sprawdź swój dzisiejszy plan (opcjonalnie)"):
+    st.write("Szybki podgląd Twoich zajęć, żeby łatwiej było zaplanować ewentualną zamianę z innym lektorem.")
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        my_name_input = st.text_input("Podaj swoje imię i nazwisko", value="").strip()
+        my_day_input = st.selectbox("Wybierz dzień do sprawdzenia", days, key="my_day")
     with col_m2:
-        my_day_input = st.selectbox("Wybierz dzień", days, key="my_day")
+        st.write("")
+        check_plan_btn = st.button("Pokaż mój plan")
         
-    if st.button("Pokaż mój plan"):
+    if check_plan_btn:
         if not active_file:
             st.error("Brak pliku grafiku.")
-        elif not my_name_input:
-            st.warning("Wpisz imię i nazwisko.")
+        elif not my_name:
+            st.warning("⚠️ Najpierw wpisz swoje imię i nazwisko w głównych opcjach wyżej!")
         else:
             try:
                 wb_temp = openpyxl.load_workbook(active_file, data_only=True)
@@ -93,7 +119,7 @@ with st.expander("📅 Sprawdź swój własny plan (opcjonalnie)"):
                 found_my_row = None
                 for r in range(4, sheet_my.max_row + 1):
                     v = str(sheet_my.cell(r, 1).value).strip()
-                    if v != "None" and my_name_input.lower() in v.lower():
+                    if v != "None" and my_name.lower() in v.lower():
                         found_my_row = r
                         break
                         
@@ -107,27 +133,13 @@ with st.expander("📅 Sprawdź swój własny plan (opcjonalnie)"):
                         start_str = my_busy[0].strftime('%H:%M')
                         last_dt = datetime.combine(datetime.today(), my_busy[-1]) + timedelta(minutes=15)
                         end_str = last_dt.strftime('%H:%M')
-                        st.success(f"W {my_day_input.lower()} masz zajęcia **od {start_str} do {end_str}**.")
+                        st.success(f"{my_name}, {grammar_days[my_day_input]['w']} masz zajęcia **od {start_str} do {end_str}**.")
                     else:
-                        st.success(f"W {my_day_input.lower()} nie masz w grafiku żadnych zajęć (masz wolne!).")
+                        st.success(f"{my_name}, {grammar_days[my_day_input]['w']} nie masz w grafiku żadnych zajęć (masz wolne!).")
                 else:
-                    st.error(f"Nie znaleziono osoby: {my_name_input} w grafiku na {my_day_input.lower()}.")
+                    st.error(f"Nie znaleziono osoby: {my_name} w grafiku na dzień: {my_day_input.lower()}.")
             except Exception as e:
                 st.error(f"Błąd sprawdzania planu: {e}")
-
-# --- USTAWIENIA NA GŁÓWNYM EKRANIE ---
-st.markdown("---")
-st.write("### Opcje wyszukiwania")
-col_opt1, col_opt2 = st.columns(2)
-with col_opt1:
-    exclude_me = st.text_input("Nie pokazuj mojego emaila", placeholder="Wpisz swoje imię i nazwisko, np. Jan Kowalski").strip().lower()
-with col_opt2:
-    st.write("") 
-    is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
-    if is_multiple:
-        num_groups = st.number_input("Ile grup?", min_value=2, max_value=5, value=2)
-    else:
-        num_groups = 1
 
 st.markdown("---")
 
@@ -326,7 +338,7 @@ if st.session_state.search_results is not None:
     with col_f4:
         show_phones = st.toggle("Pokaż numery telefonów")
 
-    st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
+    st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️️ - Problem z dojazdem")
 
     for g_idx, (g_conf, res) in enumerate(zip(groups_config, st.session_state.search_results)):
         st.markdown(f"## Wyniki dla Grupy {g_idx+1}")
@@ -362,7 +374,6 @@ if st.session_state.search_results is not None:
                 "E-mail": t["E-mail"],
                 "Telefon": t["Telefon"],
                 "Notatki": notes_str,
-                # Klucze do sortowania (nie wyświetlają się)
                 "_sort_all": sort_all,
                 "_sort_branch": t["_is_at_branch"],
                 "_sort_warn": t["_commute_warn"] == "",
@@ -372,7 +383,6 @@ if st.session_state.search_results is not None:
         if not display_data:
             st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
         else:
-            # Sortowanie: najlepsze dopasowania trafiają na górę tabeli
             display_data.sort(key=lambda x: (
                 not x["_sort_all"], 
                 not x["_sort_branch"], 
@@ -402,37 +412,41 @@ if st.session_state.search_results is not None:
             if f"tpl_{g_idx}" not in st.session_state:
                 st.session_state[f"tpl_{g_idx}"] = 0
                 
-            t_day = g_conf['day'].lower()
+            # Poprawna gramatyka ze słownika
+            t_day_raw = g_conf['day']
+            g_day = grammar_days[t_day_raw]
+            
             t_start = g_conf['start'].strftime('%H:%M')
             t_end = g_conf['end'].strftime('%H:%M')
             t_branch = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
             
             templates = [
-                f"Cześć!\n\nSzukam zastępstwa na {t_day} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\n\nMateriały będą gotowe na miejscu. Ktoś poratuje?\n\nDzięki!",
-                f"Hej wszystkim,\n\npotrzebuję pomocy z zastępstwem w najbliższy {t_day}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\n\nZ góry wielkie dzięki za pomoc!",
-                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {t_day}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\n\nBędę bardzo wdzięczny/a za uratowanie życia!",
-                f"Cześć, ma ktoś może wolne okienko w {t_day}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\n\nOdwdzięczę się przy najbliższej okazji! :)",
-                f"Hej! Poszukiwane zastępstwo na {t_day} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\n\nMateriały zostawię w pełni przygotowane. Pomoże ktoś?",
-                f"Cześć! Szukam zastępstwa na {t_day} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>. Scenariusz będzie czekał. Kto da radę wziąć?\n\nDzięki z góry!"
+                f"Cześć!\n\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\n\nMateriały będą gotowe na miejscu. Ktoś poratuje?\n\nDzięki!",
+                f"Hej wszystkim,\n\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\n\nZ góry wielkie dzięki za pomoc!",
+                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\n\nBędę bardzo wdzięczny/a za uratowanie życia!",
+                f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\n\nOdwdzięczę się przy najbliższej okazji! :)",
+                f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\n\nMateriały zostawię w pełni przygotowane. Pomoże ktoś?",
+                f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>. Scenariusz będzie czekał. Kto da radę wziąć?\n\nDzięki z góry!"
             ]
             
-            current_body = templates[st.session_state[f"tpl_{g_idx}"]]
+            current_tpl_idx = st.session_state[f"tpl_{g_idx}"]
+            current_body = templates[current_tpl_idx]
             
-            # Formularz z losowaniem szablonu i przyciskiem Mailto
             col_b1, col_b2 = st.columns([1, 2])
             with col_b1:
                 st.button("🎲 Losuj inny tekst", key=f"btn_rand_{g_idx}", on_click=next_tpl, args=(g_idx,))
             with col_b2:
-                subject = urllib.parse.quote(f"Zastępstwo - {t_day}")
+                subject = urllib.parse.quote(f"Zastępstwo - {t_day_raw.lower()}")
                 body_encoded = urllib.parse.quote(current_body)
                 bcc_emails = ";".join(emails)
+                # target="_blank" usunięty, żeby nie generować pustej strony o adresie about:blank
                 mailto_link = f"mailto:?bcc={bcc_emails}&subject={subject}&body={body_encoded}"
                 
                 st.markdown(
-                    f'<a href="{mailto_link}" target="_blank" style="display: inline-block; width: 100%; text-align: center; padding: 0.5em 1em; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 4px; font-weight: bold;">'
+                    f'<a href="{mailto_link}" style="display: inline-block; width: 100%; text-align: center; padding: 0.5em 1em; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 4px; font-weight: bold;">'
                     f'✉️ Wyślij e-mail jednym kliknięciem (otwiera Twoją pocztę)</a>', 
                     unsafe_allow_html=True
                 )
             
-            st.text_area("Możesz też skopiować tekst ręcznie:", value=current_body, height=180, key=f"text_{g_idx}")
-            st.markdown("*(Pamiętaj, by w programie pocztowym podmienić `<TU WPISZ NAZWĘ GRUPY>` i dodać biuro/lidera do DW!)*")
+            # Dynamiczny klucz zmusza Streamlita do pokazania świeżo wylosowanego tekstu w okienku
+            st.text_area("Możesz też skopiować tekst ręcznie:", value=current_body, height=180, key=f"text_{g_idx}_{current_tpl_idx}")
