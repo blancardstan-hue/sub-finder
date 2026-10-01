@@ -195,7 +195,7 @@ with col_t2:
 # Ostrzeżenie na dziwne godziny nocne ma priorytet
 is_night_0 = default_start.hour < 7 or default_start.hour >= 22 or default_end.hour < 7 or default_end.hour >= 22
 if is_night_0:
-    st.warning("🦉 Nocna zmiana? O tej porze uczą tylko sowy i wampiry. Upewnij się, czy czasem nie wpisałaś/eś czasu w formacie 12-godzinnym.")
+    st.warning("🦉 Nocna zmiana? O tej porze pracują tylko sowy, wampiry i Stanisław Blancard. Upewnij się, czy czasem nie wpisałaś/eś czasu w formacie 12-godzinnym.")
 elif default_end < default_start:
     st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
 
