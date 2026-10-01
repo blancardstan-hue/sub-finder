@@ -161,6 +161,10 @@ with col_t2:
 if default_end < default_start:
     st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
 
+# Ostrzeżenie na dziwne godziny nocne (przed 7 rano lub po 22)
+if default_start.hour < 7 or default_start.hour >= 22 or default_end.hour < 7 or default_end.hour >= 22:
+    st.warning("🦉 Nocna zmiana? O tej porze nasi lektorzy uczą angielskiego tylko sowy i wampiry. Upewnij się, czy czasem nie pomyliłeś/aś godziny 14:00 z 02:00!")
+
 groups_config.append({
     "day": default_day, "level": default_level, "branch": default_branch, 
     "start": default_start, "end": default_end
@@ -189,6 +193,9 @@ if is_multiple:
             
         if g_end < g_start:
             st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
+            
+        if g_start.hour < 7 or g_start.hour >= 22 or g_end.hour < 7 or g_end.hour >= 22:
+            st.warning("🦉 Nocna zmiana? O tej porze nasi lektorzy uczą angielskiego tylko sowy i wampiry. Upewnij się, czy czasem nie pomyliłeś/aś godziny 14:00 z 02:00!")
         
         groups_config.append({
             "day": g_day, "level": g_level, "branch": g_branch, 
