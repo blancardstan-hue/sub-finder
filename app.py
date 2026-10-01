@@ -29,7 +29,6 @@ def update_branches():
                 st.session_state[f"branch_{i}"] = new_branch
 
 def next_tpl(idx):
-    # Callback zmieniający indeks wybranego szablonu
     st.session_state[f"tpl_{idx}"] = (st.session_state.get(f"tpl_{idx}", 0) + 1) % 6
 
 # --- FUNKCJE I SŁOWNIKI BAZOWE ---
@@ -45,7 +44,6 @@ days = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek"]
 levels = ["3-5 LAT", "0", "1", "2", "3", "4", "5", "6", "7", "8+", "MASTER"]
 day_mapping = {"Poniedziałek": "PON", "Wtorek": "WT", "Środa": "ŚR", "Czwartek": "CZW", "Piątek": "PT"}
 
-# Słownik z polską odmianą dni tygodnia
 grammar_days = {
     "Poniedziałek": {"na": "poniedziałek", "w": "w poniedziałek", "najblizszy": "w najbliższy poniedziałek", "mianownik": "poniedziałek"},
     "Wtorek": {"na": "wtorek", "w": "we wtorek", "najblizszy": "w najbliższy wtorek", "mianownik": "wtorek"},
@@ -87,6 +85,7 @@ col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
     my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników i pozwala sprawdzić plan)", placeholder="np. Jan Kowalski").strip()
     exclude_me = my_name.lower()
+    my_name_parts = exclude_me.split() # Podział na pojedyncze słowa
 with col_opt2:
     st.write("") 
     is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
@@ -119,7 +118,8 @@ with st.expander("📅 Sprawdź swój dzisiejszy plan (opcjonalnie)"):
                 found_my_row = None
                 for r in range(4, sheet_my.max_row + 1):
                     v = str(sheet_my.cell(r, 1).value).strip()
-                    if v != "None" and my_name.lower() in v.lower():
+                    # Zmieniona logika: sprawdzamy czy wszystkie podane słowa są w komórce
+                    if v != "None" and all(part in v.lower() for part in my_name_parts):
                         found_my_row = r
                         break
                         
@@ -137,7 +137,7 @@ with st.expander("📅 Sprawdź swój dzisiejszy plan (opcjonalnie)"):
                     else:
                         st.success(f"{my_name}, {grammar_days[my_day_input]['w']} nie masz w grafiku żadnych zajęć (masz wolne!).")
                 else:
-                    st.error(f"Nie znaleziono osoby: {my_name} w grafiku na dzień: {my_day_input.lower()}.")
+                    st.success(f"{my_name}, nie widzę Cię w grafiku na {grammar_days[my_day_input]['mianownik']}. Oznacza to, że masz wolne (lub wkradła się literówka)!")
             except Exception as e:
                 st.error(f"Błąd sprawdzania planu: {e}")
 
@@ -253,8 +253,11 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                         val = str(row[level_col]).strip().lower()
                         if val == "v":
                             t_name = str(row[1]).strip()
-                            if exclude_me and exclude_me in t_name.lower():
+                            
+                            # Zaktualizowane wykluczanie z dzieleniem na słowa
+                            if exclude_me and all(part in t_name.lower() for part in my_name_parts):
                                 continue 
+                                
                             b_val = str(row[2]).strip()
                             phone_val = str(row[3]).strip()
                             if phone_val == "nan": phone_val = "-"
@@ -276,9 +279,12 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                 if overlapping_cols:
                     for t in q_teachers:
                         t_row = None
+                        t_name_parts = t["name"].lower().split()
+                        
+                        # Zaktualizowane wyszukiwanie nauczyciela w konkretnym dniu
                         for row in range(4, day_sheet.max_row + 1):
                             c_val = str(day_sheet.cell(row=row, column=1).value).strip()
-                            if c_val != "None" and (t["name"] in c_val or c_val in t["name"]):
+                            if c_val != "None" and all(part in c_val.lower() for part in t_name_parts):
                                 t_row = row
                                 break
                                 
@@ -338,7 +344,7 @@ if st.session_state.search_results is not None:
     with col_f4:
         show_phones = st.toggle("Pokaż numery telefonów")
 
-    st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️️ - Problem z dojazdem")
+    st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
 
     for g_idx, (g_conf, res) in enumerate(zip(groups_config, st.session_state.search_results)):
         st.markdown(f"## Wyniki dla Grupy {g_idx+1}")
@@ -412,7 +418,6 @@ if st.session_state.search_results is not None:
             if f"tpl_{g_idx}" not in st.session_state:
                 st.session_state[f"tpl_{g_idx}"] = 0
                 
-            # Poprawna gramatyka ze słownika
             t_day_raw = g_conf['day']
             g_day = grammar_days[t_day_raw]
             
@@ -439,7 +444,6 @@ if st.session_state.search_results is not None:
                 subject = urllib.parse.quote(f"Zastępstwo - {t_day_raw.lower()}")
                 body_encoded = urllib.parse.quote(current_body)
                 bcc_emails = ";".join(emails)
-                # target="_blank" usunięty, żeby nie generować pustej strony o adresie about:blank
                 mailto_link = f"mailto:?bcc={bcc_emails}&subject={subject}&body={body_encoded}"
                 
                 st.markdown(
@@ -448,5 +452,4 @@ if st.session_state.search_results is not None:
                     unsafe_allow_html=True
                 )
             
-            # Dynamiczny klucz zmusza Streamlita do pokazania świeżo wylosowanego tekstu w okienku
             st.text_area("Możesz też skopiować tekst ręcznie:", value=current_body, height=180, key=f"text_{g_idx}_{current_tpl_idx}")
