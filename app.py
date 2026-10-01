@@ -36,7 +36,8 @@ with st.expander("📖 Przypomnij zasady znajdywania zastępstw"):
     * Sprawdzam w pliku *ZASTĘPSTWA KUM&CO 2026/27*, kto nie uczy w czasie moich zajęć. (Albo odpalam sobie ten program, bo taką jestem spryciulą.)
     * W grupach **przedszkolnych i 0-3** szukam zastępstwa stacjonarnie.
     * W grupach **4+** mogę poszukać zastępstw na zajęcia **ON-LINE**, jeśli nie znajdę stacjonarnie *(min. 1 dzień wcześniej biuro musi wysłać informację do rodzica)*.
-    * Wysyłam e-mail/SMS lub dzwonię **TYLKO DO OSÓB**, które nie uczą w trakcie moich zajęć.
+    * Wysyłam e-mail/SMS lub dzwonię **TYLKO DO OSÓB**, które nie uczą w trakcie moich zajęć. 
+    * (Jeśli wyślesz maila do wszystkich PO użyciu tego programu, to soluwa za szkołą po lekcjach, serio) 
     
     **🟢 Znajduję zastępstwo ;)**
     W tabeli z zastępstwami (w filii, w której pracuję) wpisuję informacje o tym, co trzeba zrealizować (tylko zakres materiału), załączając w DW lidera, biuro i metodyków swojej filii. Biuro udostępnia e-dziennik na zastępstwo.
