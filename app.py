@@ -78,14 +78,14 @@ else:
     active_file = None
     st.warning("⚠️ Nie znaleziono domyślnego pliku na serwerze. Proszę wgrać grafik ręcznie.")
 
-# --- USTAWIENIA NA GŁÓWNYM EKRANIE (ZINTEGROWANE) ---
+# --- USTAWIENIA NA GŁÓWNYM EKRANIE ---
 st.markdown("---")
 st.write("### Główne opcje")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
-    my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników i pozwala sprawdzić plan)", placeholder="np. Jan Kowalski").strip()
+    my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników)", placeholder="np. Jan Kowalski").strip()
     exclude_me = my_name.lower()
-    my_name_parts = exclude_me.split() # Podział na pojedyncze słowa
+    my_name_parts = exclude_me.split()
 with col_opt2:
     st.write("") 
     is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
@@ -93,53 +93,6 @@ with col_opt2:
         num_groups = st.number_input("Ile grup?", min_value=2, max_value=5, value=2)
     else:
         num_groups = 1
-
-# --- SPRAWDZANIE WŁASNEGO PLANU ---
-with st.expander("📅 Sprawdź swój dzisiejszy plan (opcjonalnie)"):
-    st.write("Szybki podgląd Twoich zajęć, żeby łatwiej było zaplanować ewentualną zamianę z innym lektorem.")
-    col_m1, col_m2 = st.columns(2)
-    with col_m1:
-        my_day_input = st.selectbox("Wybierz dzień do sprawdzenia", days, key="my_day")
-    with col_m2:
-        st.write("")
-        check_plan_btn = st.button("Pokaż mój plan")
-        
-    if check_plan_btn:
-        if not active_file:
-            st.error("Brak pliku grafiku.")
-        elif not my_name:
-            st.warning("⚠️ Najpierw wpisz swoje imię i nazwisko w głównych opcjach wyżej!")
-        else:
-            try:
-                wb_temp = openpyxl.load_workbook(active_file, data_only=True)
-                sheet_my = wb_temp[day_mapping[my_day_input]]
-                header_my = [(cell.column, cell.value) for cell in sheet_my[4] if isinstance(cell.value, time)]
-                
-                found_my_row = None
-                for r in range(4, sheet_my.max_row + 1):
-                    v = str(sheet_my.cell(r, 1).value).strip()
-                    # Zmieniona logika: sprawdzamy czy wszystkie podane słowa są w komórce
-                    if v != "None" and all(part in v.lower() for part in my_name_parts):
-                        found_my_row = r
-                        break
-                        
-                if found_my_row:
-                    my_busy = []
-                    for c, t_val in header_my:
-                        if not is_cell_free(sheet_my.cell(found_my_row, c)):
-                            my_busy.append(t_val)
-                            
-                    if my_busy:
-                        start_str = my_busy[0].strftime('%H:%M')
-                        last_dt = datetime.combine(datetime.today(), my_busy[-1]) + timedelta(minutes=15)
-                        end_str = last_dt.strftime('%H:%M')
-                        st.success(f"{my_name}, {grammar_days[my_day_input]['w']} masz zajęcia **od {start_str} do {end_str}**.")
-                    else:
-                        st.success(f"{my_name}, {grammar_days[my_day_input]['w']} nie masz w grafiku żadnych zajęć (masz wolne!).")
-                else:
-                    st.success(f"{my_name}, nie widzę Cię w grafiku na {grammar_days[my_day_input]['mianownik']}. Oznacza to, że masz wolne (lub wkradła się literówka)!")
-            except Exception as e:
-                st.error(f"Błąd sprawdzania planu: {e}")
 
 st.markdown("---")
 
@@ -254,7 +207,6 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                         if val == "v":
                             t_name = str(row[1]).strip()
                             
-                            # Zaktualizowane wykluczanie z dzieleniem na słowa
                             if exclude_me and all(part in t_name.lower() for part in my_name_parts):
                                 continue 
                                 
@@ -281,7 +233,6 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                         t_row = None
                         t_name_parts = t["name"].lower().split()
                         
-                        # Zaktualizowane wyszukiwanie nauczyciela w konkretnym dniu
                         for row in range(4, day_sheet.max_row + 1):
                             c_val = str(day_sheet.cell(row=row, column=1).value).strip()
                             if c_val != "None" and all(part in c_val.lower() for part in t_name_parts):
