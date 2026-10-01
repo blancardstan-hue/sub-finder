@@ -158,12 +158,12 @@ with col_t1:
 with col_t2: 
     default_end = st.time_input("Czas zakończenia", key="end_0")
 
-if default_end < default_start:
+# Ostrzeżenie na dziwne godziny nocne ma priorytet
+is_night_0 = default_start.hour < 7 or default_start.hour >= 22 or default_end.hour < 7 or default_end.hour >= 22
+if is_night_0:
+    st.warning("🦉 Nocna zmiana? O tej porze uczą tylko sowy i wampiry. Upewnij się, czy czasem nie wpisałaś/eś czasu w formacie 12-godzinnym.")
+elif default_end < default_start:
     st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
-
-# Ostrzeżenie na dziwne godziny nocne (przed 7 rano lub po 22)
-if default_start.hour < 7 or default_start.hour >= 22 or default_end.hour < 7 or default_end.hour >= 22:
-    st.warning("🦉 Nocna zmiana? O tej porze nasi lektorzy uczą angielskiego tylko sowy i wampiry. Upewnij się, czy czasem nie pomyliłeś/aś godziny 14:00 z 02:00!")
 
 groups_config.append({
     "day": default_day, "level": default_level, "branch": default_branch, 
@@ -191,11 +191,11 @@ if is_multiple:
         with ct2: 
             g_end = st.time_input("Czas zakończenia", key=f"end_{i}")
             
-        if g_end < g_start:
+        is_night_i = g_start.hour < 7 or g_start.hour >= 22 or g_end.hour < 7 or g_end.hour >= 22
+        if is_night_i:
+            st.warning("🦉 Nocna zmiana? O tej porze uczą tylko sowy i wampiry. Upewnij się, czy czasem nie wpisałaś/eś czasu w formacie 12-godzinnym.")
+        elif g_end < g_start:
             st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
-            
-        if g_start.hour < 7 or g_start.hour >= 22 or g_end.hour < 7 or g_end.hour >= 22:
-            st.warning("🦉 Nocna zmiana? O tej porze nasi lektorzy uczą angielskiego tylko sowy i wampiry. Upewnij się, czy czasem nie pomyliłeś/aś godziny 14:00 z 02:00!")
         
         groups_config.append({
             "day": g_day, "level": g_level, "branch": g_branch, 
