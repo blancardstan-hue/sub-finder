@@ -64,9 +64,17 @@ branches = {
     "Ursus 1 (U1)": "U1", "Ursus 2 (U2)": "U2", "Komorów (K)": "K",
     "Michałowice (M)": "M", "Nowa Wieś (NW)": "NW", "Pruszków (P)": "P"
 }
+
+# Słownik dojazdowy (skąd: Dopełniacz)
 loc_grammar = {
     "U1": "Ursusa 1", "U2": "Ursusa 2", "K": "Komorowa", 
     "M": "Michałowic", "NW": "Nowej Wsi", "P": "Pruszkowa"
+}
+
+# Słownik lokalizacyjny do e-maili (gdzie: Miejscownik)
+loc_grammar_w = {
+    "U1": "Ursusie 1 (U1)", "U2": "Ursusie 2 (U2)", "K": "Komorowie (K)", 
+    "M": "Michałowicach (M)", "NW": "Nowej Wsi (NW)", "P": "Pruszkowie (P)"
 }
 
 # MATRYCA CZASÓW DOJAZDÓW
@@ -414,17 +422,25 @@ if st.session_state.search_results is not None:
                 t_day_raw = g_conf['day']
                 g_day = grammar_days[t_day_raw]
                 
+                # Odmiana filii z miejscownikiem (w "gdzieś")
+                branch_code = branches.get(g_conf['branch'])
+                if branch_code:
+                    t_branch_w = loc_grammar_w.get(branch_code, g_conf['branch'])
+                    t_branch_mianownik = g_conf['branch']
+                else:
+                    t_branch_w = "wybranej filii"
+                    t_branch_mianownik = "wybranej filii"
+
                 t_start = g_conf['start'].strftime('%H:%M')
                 t_end = g_conf['end'].strftime('%H:%M')
-                t_branch = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
                 
                 templates = [
-                    f"Cześć!\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKtoś poratuje?\nDzięki!",
-                    f"Hej wszystkim,\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\nZ góry wielkie dzięki za pomoc!",
-                    f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nZ góry dzięki za pomoc!",
-                    f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\nOdwdzięczę się przy najbliższej okazji! :)",
-                    f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nPomoże ktoś?",
-                    f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKto da radę wziąć?\nZ góry dzięki!"
+                    f"Cześć!\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w {t_branch_w} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKtoś poratuje?\nDzięki!",
+                    f"Hej wszystkim,\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch_w} (grupa <TU WPISZ NAZWĘ GRUPY>).\nZ góry wielkie dzięki za pomoc!",
+                    f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch_mianownik}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nZ góry dzięki za pomoc!",
+                    f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch_w} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\nOdwdzięczę się przy najbliższej okazji! :)",
+                    f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch_w}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nPomoże ktoś?",
+                    f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch_w}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKto da radę wziąć?\nZ góry dzięki!"
                 ]
                 
                 current_tpl_idx = st.session_state[f"tpl_{g_idx}"]
