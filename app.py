@@ -8,6 +8,16 @@ import urllib.parse
 st.set_page_config(page_title="Wyszukiwarka Zastępstw", page_icon="📋", layout="wide")
 st.title("Wyszukiwarka Zastępstw 📋")
 
+# --- UKRYWANIE ANGIELSKICH KOMUNIKATÓW STREAMLIT ---
+st.markdown("""
+    <style>
+    /* Ukrywa domyślny tekst 'Press Enter to apply' w polach tekstowych */
+    div[data-testid="InputInstructions"] {
+        display: none;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- ZARZĄDZANIE PAMIĘCIĄ SESJI I CALLBACKI ---
 if "search_results" not in st.session_state:
     st.session_state.search_results = None
@@ -113,7 +123,8 @@ with col_opt1:
         on_change=update_name
     ).strip()
     st.query_params["name"] = st.session_state.user_name
-    st.caption("💡 Zapisz ten adres URL w zakładkach, a aplikacja na zawsze zapamięta Twoje dane!")
+    
+    st.caption("💡 **Wciśnij Enter, aby zatwierdzić.** Zapisz ten adres URL w zakładkach, a aplikacja zapamięta Twoje dane!")
     
     exclude_me = my_name.lower()
     my_name_parts = exclude_me.split()
@@ -422,7 +433,6 @@ if st.session_state.search_results is not None:
                 
                 st.info("💡 **Pamiętaj, żeby wpisać się w tabelkę i załączyć w DW lidera, biuro i metodyków swojej filii :)**")
                 
-                # Funkcja generująca gotowe adresy e-mail do skopiowania
                 if st.button("Przypomnij adresy e-mail", key=f"btn_emails_{g_idx}"):
                     b_name = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
                     st.code(f"*email lidera w filii {b_name}*, *email biura filii {b_name}*, *e-mail metodyków filii {b_name}*", language="text")
@@ -448,7 +458,6 @@ if st.session_state.search_results is not None:
                 t_day_raw = g_conf['day']
                 g_day = grammar_days[t_day_raw]
                 
-                # Odmiana filii z miejscownikiem (w "gdzieś")
                 branch_code = branches.get(g_conf['branch'])
                 if branch_code:
                     t_branch_w = loc_grammar_w.get(branch_code, g_conf['branch'])
@@ -490,16 +499,17 @@ with st.expander("dla sekretariatów: pokaż potencjalne błędy w tabelach"):
                 errors = []
                 
                 for idx, row in df_diag.iterrows():
-                    # Pomijamy wiersze 0-4 (indeksy), tam gdzie są informacje z nagłówkami i poziomami 
                     if idx <= 4: continue 
                     
                     t_name = str(row[1]).strip()
                     if t_name == "nan" or not t_name: continue
                     
-                    # Logika skracania imienia i nazwiska (np. Justyna Tymińska -> Justyna T.)
+                    # Logika skracania odwrócona dla formatu Nazwisko Imię
                     parts = t_name.split()
                     if len(parts) > 1:
-                        abbr_name = f"{parts[0]} {parts[-1][0]}."
+                        imiona = " ".join(parts[1:])
+                        pierwsza_litera_nazwiska = parts[0][0]
+                        abbr_name = f"{imiona} {pierwsza_litera_nazwiska}."
                     else:
                         abbr_name = t_name
                         
@@ -511,7 +521,6 @@ with st.expander("dla sekretariatów: pokaż potencjalne błędy w tabelach"):
                     if email == "nan" or email == "-" or email == "":
                         errors.append(f"**{abbr_name}** nie ma wpisanego maila.")
                         
-                    # Sprawdzamy czy gdziekolwiek dalej w wierszu jest wpisana literka "v" (poziomy)
                     has_levels = False
                     for col_idx in range(5, len(row)):
                         if str(row[col_idx]).strip().lower() == "v":
