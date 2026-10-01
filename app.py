@@ -432,5 +432,5 @@ if st.session_state.search_results is not None:
                 
                 st.button("🎲 Losuj inny tekst", key=f"btn_rand_{g_idx}", on_click=next_tpl, args=(g_idx,))
                 
-                st.write("**Gotowy szablon (skopiuj ikonką w prawym górnym rogu):**")
+                st.write("**Gotowy szablon:**")
                 st.code(current_body, language="text")
