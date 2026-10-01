@@ -13,6 +13,13 @@ if "search_results" not in st.session_state:
     st.session_state.search_results = None
     st.session_state.teacher_counts = {}
 
+# Pobranie imienia z pamięci URL (Ciasteczka URL)
+if "user_name" not in st.session_state:
+    st.session_state.user_name = st.query_params.get("name", "")
+
+def update_name():
+    st.query_params["name"] = st.session_state.user_name
+
 def update_end_time(group_idx):
     start_key = f"start_{group_idx}"
     end_key = f"end_{group_idx}"
@@ -62,6 +69,16 @@ loc_grammar = {
     "M": "Michałowic", "NW": "Nowej Wsi", "P": "Pruszkowa"
 }
 
+# MATRYCA CZASÓW DOJAZDÓW
+drive_matrix = {
+    "M":  {"M": 0, "K": 12, "U1": 10, "U2": 12, "NW": 12, "P": 15},
+    "K":  {"M": 12, "K": 0, "U1": 20, "U2": 18, "NW": 5,  "P": 8},
+    "U1": {"M": 10, "K": 20, "U1": 0, "U2": 8,  "NW": 22, "P": 18},
+    "U2": {"M": 12, "K": 18, "U1": 8, "U2": 0,  "NW": 20, "P": 15},
+    "NW": {"M": 12, "K": 5,  "U1": 22, "U2": 20, "NW": 0,  "P": 8},
+    "P":  {"M": 15, "K": 8,  "U1": 18, "U2": 15, "NW": 8,  "P": 0}
+}
+
 # --- OBSŁUGA PLIKU ---
 default_file = "Zastępstwa 2026_27 - KUM&Co.xlsx"
 
@@ -83,9 +100,18 @@ st.markdown("---")
 st.write("### Główne opcje")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
-    my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników)", placeholder="np. Justyna Tymińska").strip()
+    my_name = st.text_input(
+        "Twoje imię i nazwisko (wyklucza Cię z wyników)", 
+        placeholder="np. Justyna Tymińska", 
+        key="user_name", 
+        on_change=update_name
+    ).strip()
+    st.query_params["name"] = st.session_state.user_name
+    st.caption("💡 Zapisz ten adres URL w zakładkach, a aplikacja na zawsze zapamięta Twoje dane!")
+    
     exclude_me = my_name.lower()
     my_name_parts = exclude_me.split()
+    
 with col_opt2:
     st.write("") 
     is_multiple = st.checkbox("Szukam zastępstw dla więcej niż 1 grupy", value=False)
@@ -175,9 +201,19 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
                     
     if last_busy_end and last_busy_end <= req_dt:
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
-        if 0 <= diff_mins <= 60:
-            od = " / ".join([loc_grammar[b] for b in t_branches_valid])
+        
+        worst_drive_time = 0
+        for b in t_branches_valid:
+            d_time = drive_matrix.get(b, {}).get(target_branch_code, 0)
+            if d_time > worst_drive_time:
+                worst_drive_time = d_time
+        
+        needed_time = 15 + worst_drive_time
+        
+        if 0 <= diff_mins < needed_time:
+            od = " / ".join([loc_grammar.get(b, b) for b in t_branches_valid])
             return f"Kończę o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
+                
     return ""
 
 st.markdown("---")
@@ -253,7 +289,7 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                     
                             if is_free:
                                 target_b_code = branches[g_conf["branch"]]
-                                commute_warn = get_commute_warning(t_row, day_sheet, g_conf["start"], target_b_code, t["branch"])
+                                commute_warn_msg = get_commute_warning(t_row, day_sheet, g_conf["start"], target_b_code, t["branch"])
                                 
                                 is_at_branch = False
                                 if target_b_code:
@@ -271,7 +307,7 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                     "Telefon": t["phone"],
                                     "Filie": t["branch"],
                                     "_is_at_branch": is_at_branch,
-                                    "_commute_warn": commute_warn
+                                    "_commute_warn": commute_warn_msg
                                 })
                                 
                 all_group_results.append(a_teachers)
@@ -303,96 +339,98 @@ if st.session_state.search_results is not None:
     st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
 
     for g_idx, (g_conf, res) in enumerate(zip(groups_config, st.session_state.search_results)):
-        st.markdown(f"## Wyniki dla Grupy {g_idx+1}")
-        st.write(f"**{g_conf['day']} | {g_conf['start'].strftime('%H:%M')} - {g_conf['end'].strftime('%H:%M')} | Poziom: {g_conf['level']} | Filia: {g_conf['branch']}**")
         
-        display_data = []
-        for t in res:
-            count = st.session_state.teacher_counts[t["Nauczyciel"]]
+        is_first = (g_idx == 0)
+        with st.expander(f"Wyniki dla Grupy {g_idx+1} ({g_conf['day']} {g_conf['start'].strftime('%H:%M')}) - Poziom {g_conf['level']}", expanded=is_first):
             
-            if show_only_all and count < int(num_groups): continue
-            if exclude_bad_commute and t["_commute_warn"] != "": continue
-            if only_same_branch and not t["_is_at_branch"]: continue
+            display_data = []
+            for t in res:
+                count = st.session_state.teacher_counts[t["Nauczyciel"]]
                 
-            notes_html = []
-            if t["_is_at_branch"]:
-                notes_html.append('<span title="Uczę w tej filii :)">🏫</span>')
-            if t["_commute_warn"]:
-                notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
-                
-            sort_all = False
-            if is_multiple:
-                odmiana = "zastępstwa" if count in [2, 3, 4] else "zastępstw"
-                if count == int(num_groups):
-                    notes_html.append(f'<span title="Mogę wziąć WSZYSTKIE {count} {odmiana}!">🔥</span>')
-                    sort_all = True
-                elif count > 1:
-                    notes_html.append(f'<span title="Mogę wziąć {count} {odmiana}.">⭐</span>')
+                if show_only_all and count < int(num_groups): continue
+                if exclude_bad_commute and t["_commute_warn"] != "": continue
+                if only_same_branch and not t["_is_at_branch"]: continue
                     
-            notes_str = " ".join(notes_html) if notes_html else "-"
-            
-            display_data.append({
-                "Nauczyciel": t["Nauczyciel"],
-                "E-mail": t["E-mail"],
-                "Telefon": t["Telefon"],
-                "Notatki": notes_str,
-                "_sort_all": sort_all,
-                "_sort_branch": t["_is_at_branch"],
-                "_sort_warn": t["_commute_warn"] == "",
-                "_sort_count": count
-            })
-            
-        if not display_data:
-            st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
-        else:
-            display_data.sort(key=lambda x: (
-                not x["_sort_all"], 
-                not x["_sort_branch"], 
-                not x["_sort_warn"], 
-                -x["_sort_count"], 
-                x["Nauczyciel"]
-            ))
-
-            emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
-            
-            st.info("💡 **Pamiętaj, żeby wpisać się w tabelkę i załączyć w DW lidera, biuro i metodyków swojej filii :)**")
-            st.code("; ".join(emails), language="text")
-            
-            if show_phones:
-                md_table = "| Nauczyciel | E-mail | Telefon | Notatki |\n|---|---|---|---|\n"
-                for d in display_data:
-                    md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Telefon']} | {d['Notatki']} |\n"
+                notes_html = []
+                if t["_is_at_branch"]:
+                    notes_html.append('<span title="Uczę w tej filii :)">🏫</span>')
+                if t["_commute_warn"]:
+                    notes_html.append(f'<span title="{t["_commute_warn"]}">⚠️</span>')
+                    
+                sort_all = False
+                if is_multiple:
+                    odmiana = "zastępstwa" if count in [2, 3, 4] else "zastępstw"
+                    if count == int(num_groups):
+                        notes_html.append(f'<span title="Mogę wziąć WSZYSTKIE {count} {odmiana}!">🔥</span>')
+                        sort_all = True
+                    elif count > 1:
+                        notes_html.append(f'<span title="Mogę wziąć {count} {odmiana}.">⭐</span>')
+                        
+                notes_str = " ".join(notes_html) if notes_html else "-"
+                
+                display_data.append({
+                    "Nauczyciel": t["Nauczyciel"],
+                    "E-mail": t["E-mail"],
+                    "Telefon": t["Telefon"],
+                    "Notatki": notes_str,
+                    "_sort_all": sort_all,
+                    "_sort_branch": t["_is_at_branch"],
+                    "_sort_warn": t["_commute_warn"] == "",
+                    "_sort_count": count
+                })
+                
+            if not display_data:
+                st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
             else:
-                md_table = "| Nauczyciel | E-mail | Notatki |\n|---|---|---|\n"
-                for d in display_data:
-                    md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Notatki']} |\n"
+                display_data.sort(key=lambda x: (
+                    not x["_sort_all"], 
+                    not x["_sort_branch"], 
+                    not x["_sort_warn"], 
+                    -x["_sort_count"], 
+                    x["Nauczyciel"]
+                ))
+
+                emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
                 
-            st.markdown(md_table, unsafe_allow_html=True)
-            
-            # --- GENERATOR E-MAILI ---
-            st.markdown("#### ✉️ Szybka wiadomość do grupy")
-            if f"tpl_{g_idx}" not in st.session_state:
-                st.session_state[f"tpl_{g_idx}"] = 0
+                st.info("💡 **Pamiętaj, żeby wpisać się w tabelkę i załączyć w DW lidera, biuro i metodyków swojej filii :)**")
+                st.code("; ".join(emails), language="text")
                 
-            t_day_raw = g_conf['day']
-            g_day = grammar_days[t_day_raw]
-            
-            t_start = g_conf['start'].strftime('%H:%M')
-            t_end = g_conf['end'].strftime('%H:%M')
-            t_branch = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
-            
-            templates = [
-                f"Cześć!\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKtoś poratuje?\nDzięki!",
-                f"Hej wszystkim,\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\nZ góry wielkie dzięki za pomoc!",
-                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nZ góry dzięki za pomoc!",
-                f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\nOdwdzięczę się przy najbliższej okazji! :)",
-                f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nPomoże ktoś?",
-                f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKto da radę wziąć?\nZ góry dzięki!"
-            ]
-            
-            current_tpl_idx = st.session_state[f"tpl_{g_idx}"]
-            current_body = templates[current_tpl_idx]
-            
-            st.button("🎲 Losuj inny tekst", key=f"btn_rand_{g_idx}", on_click=next_tpl, args=(g_idx,))
-            
-            st.text_area("Gotowy szablon (do skopiowania):", value=current_body, height=180, key=f"text_{g_idx}_{current_tpl_idx}")
+                if show_phones:
+                    md_table = "| Nauczyciel | E-mail | Telefon | Notatki |\n|---|---|---|---|\n"
+                    for d in display_data:
+                        md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Telefon']} | {d['Notatki']} |\n"
+                else:
+                    md_table = "| Nauczyciel | E-mail | Notatki |\n|---|---|---|\n"
+                    for d in display_data:
+                        md_table += f"| {d['Nauczyciel']} | {d['E-mail']} | {d['Notatki']} |\n"
+                    
+                st.markdown(md_table, unsafe_allow_html=True)
+                
+                # --- GENERATOR E-MAILI ---
+                st.markdown("#### ✉️ Szybka wiadomość do grupy")
+                if f"tpl_{g_idx}" not in st.session_state:
+                    st.session_state[f"tpl_{g_idx}"] = 0
+                    
+                t_day_raw = g_conf['day']
+                g_day = grammar_days[t_day_raw]
+                
+                t_start = g_conf['start'].strftime('%H:%M')
+                t_end = g_conf['end'].strftime('%H:%M')
+                t_branch = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
+                
+                templates = [
+                    f"Cześć!\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKtoś poratuje?\nDzięki!",
+                    f"Hej wszystkim,\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\nZ góry wielkie dzięki za pomoc!",
+                    f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nZ góry dzięki za pomoc!",
+                    f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\nOdwdzięczę się przy najbliższej okazji! :)",
+                    f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nPomoże ktoś?",
+                    f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKto da radę wziąć?\nZ góry dzięki!"
+                ]
+                
+                current_tpl_idx = st.session_state[f"tpl_{g_idx}"]
+                current_body = templates[current_tpl_idx]
+                
+                st.button("🎲 Losuj inny tekst", key=f"btn_rand_{g_idx}", on_click=next_tpl, args=(g_idx,))
+                
+                st.write("**Gotowy szablon (skopiuj ikonką w prawym górnym rogu):**")
+                st.code(current_body, language="text")
