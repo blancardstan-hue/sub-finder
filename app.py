@@ -153,13 +153,11 @@ def overlaps(cell_time, req_start, req_end):
 def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, teacher_branch_str):
     if not target_branch_code: return ""
     
-    # Rozdzielamy wszystkie filie przypisane do nauczyciela
     t_branches_raw = teacher_branch_str.upper().replace(" ", "").replace("&", "+").split("+")
     t_branches_valid = [b for b in t_branches_raw if b in loc_grammar]
     
     if not t_branches_valid or target_branch_code not in loc_grammar: return ""
     
-    # Jeśli uczy tylko w JEDNEJ filii i jest to filia docelowa - brak ostrzeżenia o dojeździe
     if len(t_branches_valid) == 1 and t_branches_valid[0] == target_branch_code: 
         return ""
     
@@ -178,7 +176,6 @@ def get_commute_warning(teacher_row, day_sheet, req_start, target_branch_code, t
     if last_busy_end and last_busy_end <= req_dt:
         diff_mins = int((req_dt - last_busy_end).total_seconds() / 60)
         if 0 <= diff_mins <= 60:
-            # Tworzymy ciąg np. "Komorowa / Michałowic" dla lektorów uczących w obu miejscach
             od = " / ".join([loc_grammar[b] for b in t_branches_valid])
             return f"Kończę o {last_busy_end.strftime('%H:%M')} ({diff_mins} min z: {od})"
     return ""
@@ -387,7 +384,7 @@ if st.session_state.search_results is not None:
             templates = [
                 f"Cześć!\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKtoś poratuje?\nDzięki!",
                 f"Hej wszystkim,\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\nZ góry wielkie dzięki za pomoc!",
-                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nZ góry wielkie dzięki za pomoc w uratowaniu zajęć!",
+                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nZ góry dzięki za pomoc!",
                 f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\nOdwdzięczę się przy najbliższej okazji! :)",
                 f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\nPomoże ktoś?",
                 f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nKto da radę wziąć?\nZ góry dzięki!"
