@@ -4,6 +4,7 @@ import streamlit as st
 from datetime import datetime, time, timedelta
 import os
 import urllib.parse
+import base64
 
 st.set_page_config(page_title="Wyszukiwarka Zastępstw", page_icon="📋", layout="wide")
 st.title("Wyszukiwarka Zastępstw 📋")
@@ -17,6 +18,25 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# --- WYŚWIETLANIE ZASAD (PDF) ---
+with st.expander("📖 Przypomnij zasady znajdywania zastępstw"):
+    pdf_file = "ZASTĘPSTWA 202627.pdf"
+    if os.path.exists(pdf_file):
+        with open(pdf_file, "rb") as f:
+            pdf_bytes = f.read()
+            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        col_pdf1, col_pdf2 = st.columns([3, 1])
+        with col_pdf1:
+            st.write("**Instrukcja i schemat postępowania**")
+        with col_pdf2:
+            st.download_button(label="📥 Pobierz plik (PDF)", data=pdf_bytes, file_name=pdf_file, mime="application/pdf")
+            
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf"></iframe>'
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    else:
+        st.info(f"💡 Aby wyświetlić zasady, upewnij się, że plik `{pdf_file}` znajduje się w tym samym folderze co aplikacja.")
 
 # --- ZARZĄDZANIE PAMIĘCIĄ SESJI I CALLBACKI ---
 if "search_results" not in st.session_state:
