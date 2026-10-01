@@ -377,29 +377,17 @@ if st.session_state.search_results is not None:
             t_branch = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
             
             templates = [
-                f"Cześć!\n\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU WPISZ NAZWĘ GRUPY>.\n\nMateriały będą gotowe na miejscu. Ktoś poratuje?\n\nDzięki!",
-                f"Hej wszystkim,\n\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU WPISZ NAZWĘ GRUPY>).\n\nZ góry wielkie dzięki za pomoc!",
-                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\n\nBędę bardzo wdzięczny/a za uratowanie życia!",
-                f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU WPISZ NAZWĘ GRUPY>).\n\nOdwdzięczę się przy najbliższej okazji! :)",
-                f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU WPISZ NAZWĘ GRUPY>\n\nMateriały zostawię w pełni przygotowane. Pomoże ktoś?",
-                f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU WPISZ NAZWĘ GRUPY>. Scenariusz będzie czekał. Kto da radę wziąć?\n\nDzięki z góry!"
+                f"Cześć!\nSzukam zastępstwa na {g_day['na']} ({t_start}-{t_end}) w filii {t_branch} dla grupy <TU GRUPY NAZWĘ WPISZ>.\nKtoś poratuje?\nDzięki!",
+                f"Hej wszystkim,\npotrzebuję pomocy z zastępstwem {g_day['najblizszy']}.\nZajęcia: {t_start}-{t_end} w {t_branch} (grupa <TU GRUPY NAZWĘ WPISZ>).\nZ góry wielkie dzięki za pomoc!",
+                f"Ratunku! Szukam dobrej duszy na zastępstwo.\nKiedy: {g_day['mianownik']}, {t_start}-{t_end}\nGdzie: {t_branch}\nGrupa: <TU GRUPY NAZWĘ WPISZ>\nZ góry wielkie dzięki za pomoc w uratowaniu zajęć!",
+                f"Cześć, ma ktoś może wolne okienko {g_day['w']}?\nSzukam zastępstwa w {t_branch} na godziny {t_start}-{t_end} (grupa <TU GRUPY NAZWĘ WPISZ>).\nOdwdzięczę się przy najbliższej okazji! :)",
+                f"Hej! Poszukiwane zastępstwo na {g_day['na']} w {t_branch}.\nGodziny: {t_start}-{t_end}\nGrupa: <TU GRUPY NAZWĘ WPISZ>\nPomoże ktoś?",
+                f"Cześć! Szukam zastępstwa na {g_day['na']} w {t_branch}. Lekcja trwa od {t_start} do {t_end} dla grupy <TU GRUPY NAZWĘ WPISZ>.\nKto da radę wziąć?\nZ góry dzięki!"
             ]
             
             current_tpl_idx = st.session_state[f"tpl_{g_idx}"]
             current_body = templates[current_tpl_idx]
             
-            col_b1, col_b2 = st.columns([1, 2])
-            with col_b1:
-                st.button("🎲 Losuj inny tekst", key=f"btn_rand_{g_idx}", on_click=next_tpl, args=(g_idx,))
-            with col_b2:
-                subject = urllib.parse.quote(f"Zastępstwo - {t_day_raw.lower()}")
-                body_encoded = urllib.parse.quote(current_body)
-                
-                # Użycie standardowego przecinka jako separatora (wymagane przez standard RFC 6068 i lepiej wspierane przez webmail)
-                bcc_emails = ",".join(emails) 
-                mailto_link = f"mailto:?bcc={bcc_emails}&subject={subject}&body={body_encoded}"
-                
-                # --- POPRAWKA: Natywny przycisk Streamlita zamiast HTML ---
-                st.link_button("✉️️ Wyślij e-mail jednym kliknięciem", url=mailto_link, type="primary", use_container_width=True)
+            st.button("🎲 Losuj inny tekst", key=f"btn_rand_{g_idx}", on_click=next_tpl, args=(g_idx,))
             
-            st.text_area("Możesz też skopiować tekst ręcznie:", value=current_body, height=180, key=f"text_{g_idx}_{current_tpl_idx}")
+            st.text_area("Gotowy szablon (do skopiowania):", value=current_body, height=180, key=f"text_{g_idx}_{current_tpl_idx}")
