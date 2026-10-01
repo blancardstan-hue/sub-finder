@@ -445,7 +445,7 @@ if st.session_state.search_results is not None:
                 
             if not display_data:
                 st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
-                st.warning("⚠️ **Uwaga:** Zanim wyślesz maila kryzysowego, sprawdź ręcznie w pliku Excel, czy na pewno nikogo nie ma (np. na tak zwane 'połówki' zajęć).")
+                st.warning("⚠️ **Uwaga:** Zanim wyślesz maila kryzysowego, sprawdź ręcznie w pliku Excel, czy na pewno nikogo nie ma. Ten program jest zlepiony na ślinę, patyki i słowo honoru. Mógł się pomylić")
                 
                 t_day_raw = g_conf['day']
                 g_day = grammar_days[t_day_raw]
