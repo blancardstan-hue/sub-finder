@@ -393,6 +393,22 @@ if st.session_state.search_results is not None:
                 
             if not display_data:
                 st.warning("Brak nauczycieli spełniających wybrane kryteria i filtry.")
+                st.warning("⚠️ **Uwaga:** Zanim wyślesz maila kryzysowego, sprawdź ręcznie w pliku Excel, czy na pewno nikogo nie ma (np. na tak zwane 'połówki' zajęć).")
+                
+                t_day_raw = g_conf['day']
+                g_day = grammar_days[t_day_raw]
+                branch_code = branches.get(g_conf['branch'])
+                if branch_code:
+                    t_branch_w = loc_grammar_w.get(branch_code, g_conf['branch'])
+                else:
+                    t_branch_w = "wybranej filii"
+                t_start = g_conf['start'].strftime('%H:%M')
+                t_end = g_conf['end'].strftime('%H:%M')
+                
+                st.markdown("#### 🚨 Generuj maila kryzysowego")
+                crisis_body = f"Nikt nie może wziąć zastępstwa na {g_day['na']} ({t_start}-{t_end}) w {t_branch_w} dla grupy <TU WPISZ NAZWĘ GRUPY>.\nProszę o interwencję i wsparcie w znalezieniu zastępstwa lub odwołaniu zajęć."
+                st.text_area("Skopiuj tekst poniżej:", value=crisis_body, height=120, key=f"crisis_txt_{g_idx}")
+                
             else:
                 display_data.sort(key=lambda x: (
                     not x["_sort_all"], 
@@ -405,6 +421,12 @@ if st.session_state.search_results is not None:
                 emails = [d["E-mail"] for d in display_data if d["E-mail"] != "nan" and "@" in d["E-mail"]]
                 
                 st.info("💡 **Pamiętaj, żeby wpisać się w tabelkę i załączyć w DW lidera, biuro i metodyków swojej filii :)**")
+                
+                # Funkcja generująca gotowe adresy e-mail do skopiowania
+                if st.button("Przypomnij adresy e-mail", key=f"btn_emails_{g_idx}"):
+                    b_name = g_conf['branch'] if g_conf['branch'] else "wybranej filii"
+                    st.code(f"*email lidera w filii {b_name}*, *email biura filii {b_name}*, *e-mail metodyków filii {b_name}*", language="text")
+                
                 st.code("; ".join(emails), language="text")
                 
                 if show_phones:
@@ -454,3 +476,66 @@ if st.session_state.search_results is not None:
                 
                 st.write("**Gotowy szablon:**")
                 st.code(current_body, language="text")
+
+# --- FOOTER Z LINKAMI I DIAGNOSTYKĄ ---
+st.markdown("---")
+
+with st.expander("dla sekretariatów: pokaż potencjalne błędy w tabelach"):
+    if st.button("Uruchom diagnostykę grafiku"):
+        if active_file is None:
+            st.error("Wgraj najpierw plik Excel z grafikiem.")
+        else:
+            try:
+                df_diag = pd.read_excel(active_file, sheet_name="Lektorzy i poziomy grup na zast", header=None)
+                errors = []
+                
+                for idx, row in df_diag.iterrows():
+                    # Pomijamy wiersze 0-4 (indeksy), tam gdzie są informacje z nagłówkami i poziomami 
+                    if idx <= 4: continue 
+                    
+                    t_name = str(row[1]).strip()
+                    if t_name == "nan" or not t_name: continue
+                    
+                    # Logika skracania imienia i nazwiska (np. Justyna Tymińska -> Justyna T.)
+                    parts = t_name.split()
+                    if len(parts) > 1:
+                        abbr_name = f"{parts[0]} {parts[-1][0]}."
+                    else:
+                        abbr_name = t_name
+                        
+                    phone = str(row[3]).strip()
+                    email = str(row[4]).strip()
+                    
+                    if phone == "nan" or phone == "-" or phone == "":
+                        errors.append(f"**{abbr_name}** nie ma wpisanego numeru telefonu.")
+                    if email == "nan" or email == "-" or email == "":
+                        errors.append(f"**{abbr_name}** nie ma wpisanego maila.")
+                        
+                    # Sprawdzamy czy gdziekolwiek dalej w wierszu jest wpisana literka "v" (poziomy)
+                    has_levels = False
+                    for col_idx in range(5, len(row)):
+                        if str(row[col_idx]).strip().lower() == "v":
+                            has_levels = True
+                            break
+                            
+                    if not has_levels:
+                        errors.append(f"**{abbr_name}** nie ma wpisanych żadnych poziomów jako odpowiednich.")
+                        
+                if errors:
+                    for e in errors:
+                        st.write(f"- {e}")
+                else:
+                    st.success("Wszystko wygląda poprawnie! Brak braków w mailach, telefonach i przypisanych poziomach.")
+                    
+            except Exception as e:
+                st.error(f"Wystąpił błąd podczas skanowania pliku: {e}")
+
+col_qr, col_fb = st.columns(2)
+with col_qr:
+    st.write("**Aplikacja na telefon (zeskanuj kod QR):**")
+    st.image("https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://tinyurl.com/needasubpls", width=120)
+    st.write("Adres: [https://tinyurl.com/needasubpls](https://tinyurl.com/needasubpls)")
+    
+with col_fb:
+    st.write("**błąd? sugestia?**")
+    st.write("Wpisz tutaj: [https://tinyurl.com/cosniebangla](https://tinyurl.com/cosniebangla)")
