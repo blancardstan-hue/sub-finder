@@ -83,7 +83,7 @@ st.markdown("---")
 st.write("### Główne opcje")
 col_opt1, col_opt2 = st.columns(2)
 with col_opt1:
-    my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników)", placeholder="np. Jan Kowalski").strip()
+    my_name = st.text_input("Twoje imię i nazwisko (wyklucza Cię z wyników)", placeholder="np. Justyna Tymińska").strip()
     exclude_me = my_name.lower()
     my_name_parts = exclude_me.split()
 with col_opt2:
