@@ -492,7 +492,7 @@ if st.session_state.search_results is not None:
                 st.markdown(md_table, unsafe_allow_html=True)
                 
                 # --- GENERATOR E-MAILI ---
-                st.markdown("#### ✉️ Szybka wiadomość do grupy")
+                st.markdown("#### ✉️ Szybka wiadomość")
                 if f"tpl_{g_idx}" not in st.session_state:
                     st.session_state[f"tpl_{g_idx}"] = 0
                     
