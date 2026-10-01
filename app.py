@@ -33,7 +33,7 @@ with st.expander("📖 Przypomnij zasady znajdywania zastępstw"):
     ### 🚨 Co robić, kiedy potrzebuję zastępstwa?
     
     #### 1️⃣ Sytuacja z "ZAPASEM CZASOWYM" (wiem z wyprzedzeniem):
-    * Sprawdzam w pliku *ZASTĘPSTWA KUM&CO 2026/27*, kto nie uczy w czasie moich zajęć. (Albo odpalam sobie ten program, taką jestem spryciulą.)
+    * Sprawdzam w pliku *ZASTĘPSTWA KUM&CO 2026/27*, kto nie uczy w czasie moich zajęć. (Albo odpalam sobie ten program, bo taką jestem spryciulą.)
     * W grupach **przedszkolnych i 0-3** szukam zastępstwa stacjonarnie.
     * W grupach **4+** mogę poszukać zastępstw na zajęcia **ON-LINE**, jeśli nie znajdę stacjonarnie *(min. 1 dzień wcześniej biuro musi wysłać informację do rodzica)*.
     * Wysyłam e-mail/SMS lub dzwonię **TYLKO DO OSÓB**, które nie uczą w trakcie moich zajęć.
