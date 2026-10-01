@@ -64,8 +64,6 @@ branches = {
     "Ursus 1 (U1)": "U1", "Ursus 2 (U2)": "U2", "Komorów (K)": "K",
     "Michałowice (M)": "M", "Nowa Wieś (NW)": "NW", "Pruszków (P)": "P"
 }
-
-# Słownik dojazdowy (skąd: Dopełniacz)
 loc_grammar = {
     "U1": "Ursusa 1", "U2": "Ursusa 2", "K": "Komorowa", 
     "M": "Michałowic", "NW": "Nowej Wsi", "P": "Pruszkowa"
@@ -149,6 +147,9 @@ with col_t1:
 with col_t2: 
     default_end = st.time_input("Czas zakończenia", key="end_0")
 
+if default_end < default_start:
+    st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
+
 groups_config.append({
     "day": default_day, "level": default_level, "branch": default_branch, 
     "start": default_start, "end": default_end
@@ -174,6 +175,9 @@ if is_multiple:
             g_start = st.time_input("Czas rozpoczęcia", key=f"start_{i}", on_change=update_end_time, args=(i,))
         with ct2: 
             g_end = st.time_input("Czas zakończenia", key=f"end_{i}")
+            
+        if g_end < g_start:
+            st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
         
         groups_config.append({
             "day": g_day, "level": g_level, "branch": g_branch, 
