@@ -4,6 +4,7 @@ import streamlit as st
 from datetime import datetime, time, timedelta
 import os
 import urllib.parse
+import base64
 
 st.set_page_config(page_title="Wyszukiwarka Zastępstw", page_icon="📋", layout="wide")
 st.title("Wyszukiwarka Zastępstw 📋")
@@ -55,7 +56,6 @@ with st.expander("📖 Przypomnij zasady znajdywania zastępstw"):
 # --- ZARZĄDZANIE PAMIĘCIĄ SESJI I CALLBACKI ---
 if "search_results" not in st.session_state:
     st.session_state.search_results = None
-    st.session_state.teacher_counts = {}
 
 # Pobranie imienia z pamięci URL (Ciasteczka URL)
 if "user_name" not in st.session_state:
@@ -227,9 +227,9 @@ if is_multiple:
             
         is_night_i = g_start.hour < 7 or g_start.hour >= 22 or g_end.hour < 7 or g_end.hour >= 22
         if is_night_i:
-            st.warning("🦉 Nocna zmiana? O tej porze uczą tylko sowy i wampiry. Upewnij się, czy czasem nie wpisałaś/eś czasu w formacie 12-godzinnym.")
+            st.warning("🦉 Nocna zmiana? O tej porze pracują tylko sowy i wampiry. Upewnij się, czy czasem nie używasz czasu w formacie 12-godzinnym.")
         elif g_end < g_start:
-            st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
+            st.warning("🕰️️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
         
         groups_config.append({
             "day": g_day, "level": g_level, "branch": g_branch, 
@@ -375,14 +375,8 @@ if st.button("Znajdź Zastępstwo 🚀", use_container_width=True):
                                 })
                                 
                 all_group_results.append(a_teachers)
-                
-            counts = {}
-            for res in all_group_results:
-                for t in res:
-                    counts[t["Nauczyciel"]] = counts.get(t["Nauczyciel"], 0) + 1
                     
             st.session_state.search_results = all_group_results
-            st.session_state.teacher_counts = counts
             
         except Exception as e:
             st.error(f"Wystąpił błąd: {e}")
@@ -402,18 +396,34 @@ if st.session_state.search_results is not None:
 
     st.info("💡 **Legenda (najedź na ikonę):** 🔥 - Wszystkie grupy | ⭐ - Część grup | 🏫 - Ta sama filia | ⚠️ - Problem z dojazdem")
 
-    for g_idx, (g_conf, res) in enumerate(zip(groups_config, st.session_state.search_results)):
+    # Krok 1: Aplikujemy filtry UI na wszystkie grupy ZANIM policzymy odznaki 🔥
+    filtered_results = []
+    for res in st.session_state.search_results:
+        g_filtered = []
+        for t in res:
+            if exclude_bad_commute and t["_commute_warn"] != "": continue
+            if only_same_branch and not t["_is_at_branch"]: continue
+            g_filtered.append(t)
+        filtered_results.append(g_filtered)
+        
+    # Krok 2: Liczymy wystąpienia lektorów tylko w przefiltrowanej puli
+    filtered_counts = {}
+    for res in filtered_results:
+        for t in res:
+            filtered_counts[t["Nauczyciel"]] = filtered_counts.get(t["Nauczyciel"], 0) + 1
+
+    # Krok 3: Wyświetlamy ostateczne wyniki używając poprawionych zliczeń
+    for g_idx, (g_conf, res) in enumerate(zip(groups_config, filtered_results)):
         
         is_first = (g_idx == 0)
         with st.expander(f"Wyniki dla Grupy {g_idx+1} ({g_conf['day']} {g_conf['start'].strftime('%H:%M')}) - Poziom {g_conf['level']}", expanded=is_first):
             
             display_data = []
             for t in res:
-                count = st.session_state.teacher_counts[t["Nauczyciel"]]
+                count = filtered_counts[t["Nauczyciel"]]
                 
+                # Ten filtr aplikujemy na samym końcu (ukrywa lektorów z małą liczbą przypisanych grup)
                 if show_only_all and count < int(num_groups): continue
-                if exclude_bad_commute and t["_commute_warn"] != "": continue
-                if only_same_branch and not t["_is_at_branch"]: continue
                     
                 notes_html = []
                 if t["_is_at_branch"]:
@@ -492,7 +502,7 @@ if st.session_state.search_results is not None:
                 st.markdown(md_table, unsafe_allow_html=True)
                 
                 # --- GENERATOR E-MAILI ---
-                st.markdown("#### ✉️ Szybka wiadomość")
+                st.markdown("#### ✉️ Szybka wiadomość do grupy")
                 if f"tpl_{g_idx}" not in st.session_state:
                     st.session_state[f"tpl_{g_idx}"] = 0
                     
