@@ -455,7 +455,7 @@ if st.session_state.search_results is not None:
                 
             if not display_data:
                 st.warning("Brak lektorów spełniających wybrane kryteria i filtry.")
-                st.warning("⚠️ **Uwaga:** Zanim wyślesz maila kryzysowego, sprawdź czy to nie przez filtry na górze, a później ręcznie w pliku Excel, czy na pewno nikogo nie ma. Ten program trzyma się na ślinę, dwa patyki i słowo honoru. Mógł się pomylić.")
+                st.warning("⚠️ **Uwaga:** Zanim wyślesz maila kryzysowego, sprawdź czy to nie przez filtry na górze. Jeśli nadal nie działa, to zerknij sam(a) w pliku Excel, czy na pewno nikogo nie ma. Ten program trzyma się na ślinę, dwa patyki i słowo honoru. Mógł się pomylić.")
                 
                 t_day_raw = g_conf['day']
                 g_day = grammar_days[t_day_raw]
