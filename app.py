@@ -197,7 +197,7 @@ is_night_0 = default_start.hour < 7 or default_start.hour >= 22 or default_end.h
 if is_night_0:
     st.warning("🦉 Nocna zmiana? O tej porze pracują tylko sowy i wampiry. Upewnij się, czy czasem nie używasz czasu w formacie 12-godzinnym.")
 elif default_end < default_start:
-    st.warning("🕰️ Ktoś tu chyba wynalazł wehikuł czasu! Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
+    st.warning("🕰️ Wehikuł czasu, to byłby cud. Zajęcia kończą się przed ich rozpoczęciem. Niestety DeLorean jest w warsztacie – popraw godziny.")
 
 groups_config.append({
     "day": default_day, "level": default_level, "branch": default_branch, 
